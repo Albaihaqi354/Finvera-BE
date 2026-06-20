@@ -1,0 +1,19 @@
+/tmp/
+tmp/
+air.log
+*.exe
+*.test
+.env
+finvera-be
+
+# IDEs
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Go
+vendor/
+coverage.out
+*.log
