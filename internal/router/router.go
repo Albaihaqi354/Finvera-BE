@@ -52,10 +52,11 @@ func SetupRouter(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 		{
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
+			auth.POST("/logout", authHandler.Logout)
 		}
 
 		// Protected Routes
-		protected := v1.Group("/")
+		protected := v1.Group("")
 		protected.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 		{
 			// Accounts

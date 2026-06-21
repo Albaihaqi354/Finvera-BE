@@ -92,3 +92,20 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		"token":   token,
 	})
 }
+
+// Logout godoc
+// @Summary      Logout user
+// @Description  Logout user (dummy endpoint for stateless JWT)
+// @Tags         Auth
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200   {object}  map[string]string
+// @Router       /auth/logout [post]
+func (h *AuthHandler) Logout(c *gin.Context) {
+	// Pada arsitektur JWT stateless, logout biasanya hanya dengan menghapus
+	// token di sisi client (localStorage/cookie). Endpoint ini disediakan 
+	// jika ke depannya ingin menerapkan mekanisme token blacklist.
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Logout successful",
+	})
+}
