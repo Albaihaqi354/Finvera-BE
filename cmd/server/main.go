@@ -8,6 +8,7 @@ import (
 
 	_ "finvera-be/docs" // swagger docs - wajib di-import
 
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -37,6 +38,13 @@ func main() {
 
 	// 3. Setup Router (Gin)
 	r := gin.Default()
+
+	// CORS Config
+	corsConfig := cors.DefaultConfig()
+	corsConfig.AllowAllOrigins = true // Atau gunakan corsConfig.AllowOrigins = []string{"http://localhost:3000"}
+	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
+	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
+	r.Use(cors.New(corsConfig))
 
 	// Health Check
 	r.GET("/ping", func(c *gin.Context) {
