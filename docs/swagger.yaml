@@ -1,5 +1,266 @@
 basePath: /api/v1
 definitions:
+  dto.CreateAccountRequest:
+    properties:
+      color:
+        type: string
+      currency:
+        type: string
+      icon:
+        type: string
+      initialBalance:
+        type: number
+      name:
+        type: string
+      note:
+        type: string
+      type:
+        enum:
+        - asset
+        - liability
+        type: string
+    required:
+    - name
+    - type
+    type: object
+  dto.CreateCategoryRequest:
+    properties:
+      color:
+        type: string
+      icon:
+        type: string
+      name:
+        type: string
+      note:
+        type: string
+      sortOrder:
+        type: integer
+      type:
+        enum:
+        - income
+        - expense
+        - transfer
+        type: string
+    required:
+    - name
+    - type
+    type: object
+  dto.CreateScheduledRequest:
+    properties:
+      accountId:
+        type: string
+      amount:
+        type: number
+      categoryId:
+        type: string
+      frequency:
+        enum:
+        - daily
+        - weekly
+        - monthly
+        - yearly
+        type: string
+      isActive:
+        type: boolean
+      name:
+        type: string
+      nextRun:
+        type: string
+      note:
+        type: string
+      targetAccountId:
+        type: string
+      type:
+        enum:
+        - income
+        - expense
+        - transfer
+        type: string
+    required:
+    - accountId
+    - amount
+    - categoryId
+    - frequency
+    - name
+    - nextRun
+    - type
+    type: object
+  dto.CreateTagRequest:
+    properties:
+      color:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  dto.CreateTransactionRequest:
+    properties:
+      accountId:
+        type: string
+      amount:
+        type: number
+      categoryId:
+        type: string
+      date:
+        type: string
+      note:
+        type: string
+      tagIds:
+        items:
+          type: string
+        type: array
+      targetAccountId:
+        type: string
+      type:
+        enum:
+        - income
+        - expense
+        - transfer
+        type: string
+    required:
+    - accountId
+    - amount
+    - categoryId
+    - date
+    - type
+    type: object
+  dto.Response:
+    properties:
+      data: {}
+      error:
+        type: string
+      meta: {}
+      msg:
+        type: string
+      success:
+        type: boolean
+    type: object
+  dto.UpdateAccountRequest:
+    properties:
+      color:
+        type: string
+      currency:
+        type: string
+      icon:
+        type: string
+      initialBalance:
+        type: number
+      name:
+        type: string
+      note:
+        type: string
+      type:
+        enum:
+        - asset
+        - liability
+        type: string
+    required:
+    - name
+    - type
+    type: object
+  dto.UpdateCategoryRequest:
+    properties:
+      color:
+        type: string
+      icon:
+        type: string
+      name:
+        type: string
+      note:
+        type: string
+      sortOrder:
+        type: integer
+      type:
+        enum:
+        - income
+        - expense
+        - transfer
+        type: string
+    required:
+    - name
+    - type
+    type: object
+  dto.UpdateScheduledRequest:
+    properties:
+      accountId:
+        type: string
+      amount:
+        type: number
+      categoryId:
+        type: string
+      frequency:
+        enum:
+        - daily
+        - weekly
+        - monthly
+        - yearly
+        type: string
+      isActive:
+        type: boolean
+      name:
+        type: string
+      nextRun:
+        type: string
+      note:
+        type: string
+      targetAccountId:
+        type: string
+      type:
+        enum:
+        - income
+        - expense
+        - transfer
+        type: string
+    required:
+    - accountId
+    - amount
+    - categoryId
+    - frequency
+    - name
+    - nextRun
+    - type
+    type: object
+  dto.UpdateTagRequest:
+    properties:
+      color:
+        type: string
+      name:
+        type: string
+    required:
+    - name
+    type: object
+  dto.UpdateTransactionRequest:
+    properties:
+      accountId:
+        type: string
+      amount:
+        type: number
+      categoryId:
+        type: string
+      date:
+        type: string
+      note:
+        type: string
+      tagIds:
+        items:
+          type: string
+        type: array
+      targetAccountId:
+        type: string
+      type:
+        enum:
+        - income
+        - expense
+        - transfer
+        type: string
+    required:
+    - accountId
+    - amount
+    - categoryId
+    - date
+    - type
+    type: object
   handler.LoginRequest:
     properties:
       password:
@@ -30,256 +291,6 @@ definitions:
     - password
     - username
     type: object
-  service.CreateAccountRequest:
-    properties:
-      color:
-        type: string
-      currency:
-        type: string
-      icon:
-        type: string
-      initialBalance:
-        type: number
-      name:
-        type: string
-      note:
-        type: string
-      type:
-        enum:
-        - asset
-        - liability
-        type: string
-    required:
-    - name
-    - type
-    type: object
-  service.CreateCategoryRequest:
-    properties:
-      color:
-        type: string
-      icon:
-        type: string
-      name:
-        type: string
-      note:
-        type: string
-      sortOrder:
-        type: integer
-      type:
-        enum:
-        - income
-        - expense
-        - transfer
-        type: string
-    required:
-    - name
-    - type
-    type: object
-  service.CreateScheduledRequest:
-    properties:
-      accountId:
-        type: string
-      amount:
-        type: number
-      categoryId:
-        type: string
-      frequency:
-        enum:
-        - daily
-        - weekly
-        - monthly
-        - yearly
-        type: string
-      isActive:
-        type: boolean
-      name:
-        type: string
-      nextRun:
-        type: string
-      note:
-        type: string
-      targetAccountId:
-        type: string
-      type:
-        enum:
-        - income
-        - expense
-        - transfer
-        type: string
-    required:
-    - accountId
-    - amount
-    - categoryId
-    - frequency
-    - name
-    - nextRun
-    - type
-    type: object
-  service.CreateTagRequest:
-    properties:
-      color:
-        type: string
-      name:
-        type: string
-    required:
-    - name
-    type: object
-  service.CreateTransactionRequest:
-    properties:
-      accountId:
-        type: string
-      amount:
-        type: number
-      categoryId:
-        type: string
-      date:
-        type: string
-      note:
-        type: string
-      tagIds:
-        items:
-          type: string
-        type: array
-      targetAccountId:
-        type: string
-      type:
-        enum:
-        - income
-        - expense
-        - transfer
-        type: string
-    required:
-    - accountId
-    - amount
-    - categoryId
-    - date
-    - type
-    type: object
-  service.UpdateAccountRequest:
-    properties:
-      color:
-        type: string
-      currency:
-        type: string
-      icon:
-        type: string
-      initialBalance:
-        type: number
-      name:
-        type: string
-      note:
-        type: string
-      type:
-        enum:
-        - asset
-        - liability
-        type: string
-    required:
-    - name
-    - type
-    type: object
-  service.UpdateCategoryRequest:
-    properties:
-      color:
-        type: string
-      icon:
-        type: string
-      name:
-        type: string
-      note:
-        type: string
-      sortOrder:
-        type: integer
-      type:
-        enum:
-        - income
-        - expense
-        - transfer
-        type: string
-    required:
-    - name
-    - type
-    type: object
-  service.UpdateScheduledRequest:
-    properties:
-      accountId:
-        type: string
-      amount:
-        type: number
-      categoryId:
-        type: string
-      frequency:
-        enum:
-        - daily
-        - weekly
-        - monthly
-        - yearly
-        type: string
-      isActive:
-        type: boolean
-      name:
-        type: string
-      nextRun:
-        type: string
-      note:
-        type: string
-      targetAccountId:
-        type: string
-      type:
-        enum:
-        - income
-        - expense
-        - transfer
-        type: string
-    required:
-    - accountId
-    - amount
-    - categoryId
-    - frequency
-    - name
-    - nextRun
-    - type
-    type: object
-  service.UpdateTagRequest:
-    properties:
-      color:
-        type: string
-      name:
-        type: string
-    required:
-    - name
-    type: object
-  service.UpdateTransactionRequest:
-    properties:
-      accountId:
-        type: string
-      amount:
-        type: number
-      categoryId:
-        type: string
-      date:
-        type: string
-      note:
-        type: string
-      tagIds:
-        items:
-          type: string
-        type: array
-      targetAccountId:
-        type: string
-      type:
-        enum:
-        - income
-        - expense
-        - transfer
-        type: string
-    required:
-    - accountId
-    - amount
-    - categoryId
-    - date
-    - type
-    type: object
 host: localhost:8080
 info:
   contact:
@@ -289,22 +300,29 @@ info:
   title: Finvera API
   version: "1.0"
 paths:
-  /api/v1/accounts:
+  /accounts:
     get:
       description: Get all accounts for the authenticated user
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: limit
+        type: integer
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/dto.Response'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/dto.Response'
       security:
       - BearerAuth: []
       summary: Get all accounts
@@ -320,31 +338,28 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/service.CreateAccountRequest'
+          $ref: '#/definitions/dto.CreateAccountRequest'
       produces:
       - application/json
       responses:
         "201":
           description: Created
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/dto.Response'
         "400":
           description: Bad Request
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/dto.Response'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/dto.Response'
       security:
       - BearerAuth: []
       summary: Create a new account
       tags:
       - Accounts
-  /api/v1/accounts/{id}:
+  /accounts/{id}:
     delete:
       description: Delete an account
       parameters:
@@ -359,18 +374,15 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/dto.Response'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/dto.Response'
         "404":
           description: Not Found
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/dto.Response'
       security:
       - BearerAuth: []
       summary: Delete account
@@ -390,18 +402,15 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/dto.Response'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/dto.Response'
         "404":
           description: Not Found
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/dto.Response'
       security:
       - BearerAuth: []
       summary: Get account by ID
@@ -422,748 +431,31 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/service.UpdateAccountRequest'
+          $ref: '#/definitions/dto.UpdateAccountRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/dto.Response'
         "400":
           description: Bad Request
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/dto.Response'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/dto.Response'
         "404":
           description: Not Found
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/dto.Response'
       security:
       - BearerAuth: []
       summary: Update account
       tags:
       - Accounts
-  /api/v1/categories:
-    get:
-      description: Get all default and custom categories for the user
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get all categories
-      tags:
-      - Categories
-    post:
-      consumes:
-      - application/json
-      description: Create a new custom category for the authenticated user
-      parameters:
-      - description: Create Category Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/service.CreateCategoryRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Create a new category
-      tags:
-      - Categories
-  /api/v1/categories/{id}:
-    delete:
-      description: Delete a custom category
-      parameters:
-      - description: Category ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Delete category
-      tags:
-      - Categories
-    get:
-      description: Get category details by category ID
-      parameters:
-      - description: Category ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get category by ID
-      tags:
-      - Categories
-    put:
-      consumes:
-      - application/json
-      description: Update custom category details
-      parameters:
-      - description: Category ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Update Category Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/service.UpdateCategoryRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "403":
-          description: Forbidden
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Update category
-      tags:
-      - Categories
-  /api/v1/scheduled:
-    get:
-      description: Get all scheduled transactions for the authenticated user
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get all scheduled transactions
-      tags:
-      - ScheduledTransactions
-    post:
-      consumes:
-      - application/json
-      description: Create a new scheduled transaction for the authenticated user
-      parameters:
-      - description: Create Scheduled Transaction Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/service.CreateScheduledRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Create a new scheduled transaction
-      tags:
-      - ScheduledTransactions
-  /api/v1/scheduled/{id}:
-    delete:
-      description: Delete a scheduled transaction
-      parameters:
-      - description: Scheduled Transaction ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Delete scheduled transaction
-      tags:
-      - ScheduledTransactions
-    get:
-      description: Get scheduled transaction details by ID
-      parameters:
-      - description: Scheduled Transaction ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get scheduled transaction by ID
-      tags:
-      - ScheduledTransactions
-    put:
-      consumes:
-      - application/json
-      description: Update scheduled transaction details
-      parameters:
-      - description: Scheduled Transaction ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Update Scheduled Transaction Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/service.UpdateScheduledRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Update scheduled transaction
-      tags:
-      - ScheduledTransactions
-  /api/v1/tags:
-    get:
-      description: Get all tags for the authenticated user
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get all tags
-      tags:
-      - Tags
-    post:
-      consumes:
-      - application/json
-      description: Create a new tag for the authenticated user
-      parameters:
-      - description: Create Tag Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/service.CreateTagRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Create a new tag
-      tags:
-      - Tags
-  /api/v1/tags/{id}:
-    delete:
-      description: Delete a tag
-      parameters:
-      - description: Tag ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Delete tag
-      tags:
-      - Tags
-    get:
-      description: Get tag details by tag ID
-      parameters:
-      - description: Tag ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get tag by ID
-      tags:
-      - Tags
-    put:
-      consumes:
-      - application/json
-      description: Update tag details
-      parameters:
-      - description: Tag ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Update Tag Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/service.UpdateTagRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Update tag
-      tags:
-      - Tags
-  /api/v1/transactions:
-    get:
-      description: Get all transactions for the authenticated user
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get all transactions
-      tags:
-      - Transactions
-    post:
-      consumes:
-      - application/json
-      description: Create a new transaction and update account balances accordingly
-      parameters:
-      - description: Create Transaction Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/service.CreateTransactionRequest'
-      produces:
-      - application/json
-      responses:
-        "201":
-          description: Created
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Create a new transaction
-      tags:
-      - Transactions
-  /api/v1/transactions/{id}:
-    delete:
-      description: Delete a transaction and revert its effect on account balances
-      parameters:
-      - description: Transaction ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Delete transaction
-      tags:
-      - Transactions
-    get:
-      description: Get transaction details by transaction ID
-      parameters:
-      - description: Transaction ID
-        in: path
-        name: id
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "404":
-          description: Not Found
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Get transaction by ID
-      tags:
-      - Transactions
-    put:
-      consumes:
-      - application/json
-      description: Update transaction details and adjust account balances accordingly
-      parameters:
-      - description: Transaction ID
-        in: path
-        name: id
-        required: true
-        type: string
-      - description: Update Transaction Request
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/service.UpdateTransactionRequest'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "401":
-          description: Unauthorized
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      security:
-      - BearerAuth: []
-      summary: Update transaction
-      tags:
-      - Transactions
   /auth/login:
     post:
       consumes:
@@ -1229,6 +521,682 @@ paths:
       summary: Registrasi user baru
       tags:
       - Auth
+  /categories:
+    get:
+      description: Get all default and custom categories for the user
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Get all categories
+      tags:
+      - Categories
+    post:
+      consumes:
+      - application/json
+      description: Create a new custom category for the authenticated user
+      parameters:
+      - description: Create Category Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Create a new category
+      tags:
+      - Categories
+  /categories/{id}:
+    delete:
+      description: Delete a custom category
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Delete category
+      tags:
+      - Categories
+    get:
+      description: Get category details by category ID
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Get category by ID
+      tags:
+      - Categories
+    put:
+      consumes:
+      - application/json
+      description: Update custom category details
+      parameters:
+      - description: Category ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update Category Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateCategoryRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Update category
+      tags:
+      - Categories
+  /scheduled:
+    get:
+      description: Get all scheduled transactions for the authenticated user
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Get all scheduled transactions
+      tags:
+      - ScheduledTransactions
+    post:
+      consumes:
+      - application/json
+      description: Create a new scheduled transaction for the authenticated user
+      parameters:
+      - description: Create Scheduled Transaction Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateScheduledRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Create a new scheduled transaction
+      tags:
+      - ScheduledTransactions
+  /scheduled/{id}:
+    delete:
+      description: Delete a scheduled transaction
+      parameters:
+      - description: Scheduled Transaction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Delete scheduled transaction
+      tags:
+      - ScheduledTransactions
+    get:
+      description: Get scheduled transaction details by ID
+      parameters:
+      - description: Scheduled Transaction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Get scheduled transaction by ID
+      tags:
+      - ScheduledTransactions
+    put:
+      consumes:
+      - application/json
+      description: Update scheduled transaction details
+      parameters:
+      - description: Scheduled Transaction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update Scheduled Transaction Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateScheduledRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Update scheduled transaction
+      tags:
+      - ScheduledTransactions
+  /tags:
+    get:
+      description: Get all tags for the authenticated user
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Get all tags
+      tags:
+      - Tags
+    post:
+      consumes:
+      - application/json
+      description: Create a new tag for the authenticated user
+      parameters:
+      - description: Create Tag Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateTagRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Create a new tag
+      tags:
+      - Tags
+  /tags/{id}:
+    delete:
+      description: Delete a tag
+      parameters:
+      - description: Tag ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Delete tag
+      tags:
+      - Tags
+    get:
+      description: Get tag details by tag ID
+      parameters:
+      - description: Tag ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Get tag by ID
+      tags:
+      - Tags
+    put:
+      consumes:
+      - application/json
+      description: Update tag details
+      parameters:
+      - description: Tag ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update Tag Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateTagRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Update tag
+      tags:
+      - Tags
+  /transactions:
+    get:
+      description: Get all transactions for the authenticated user
+      parameters:
+      - description: Page number
+        in: query
+        name: page
+        type: integer
+      - description: Items per page
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Get all transactions
+      tags:
+      - Transactions
+    post:
+      consumes:
+      - application/json
+      description: Create a new transaction and update account balances accordingly
+      parameters:
+      - description: Create Transaction Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.CreateTransactionRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Create a new transaction
+      tags:
+      - Transactions
+  /transactions/{id}:
+    delete:
+      description: Delete a transaction and revert its effect on account balances
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Delete transaction
+      tags:
+      - Transactions
+    get:
+      description: Get transaction details by transaction ID
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Get transaction by ID
+      tags:
+      - Transactions
+    put:
+      consumes:
+      - application/json
+      description: Update transaction details and adjust account balances accordingly
+      parameters:
+      - description: Transaction ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Update Transaction Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/dto.UpdateTransactionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/dto.Response'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/dto.Response'
+      security:
+      - BearerAuth: []
+      summary: Update transaction
+      tags:
+      - Transactions
 securityDefinitions:
   BearerAuth:
     description: 'Masukkan token JWT dengan format: Bearer {token}'
