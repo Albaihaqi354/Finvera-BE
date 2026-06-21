@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"finvera-be/internal/dto"
 	"finvera-be/internal/models"
 	"finvera-be/internal/repository"
 
@@ -9,10 +10,10 @@ import (
 )
 
 type TagService interface {
-	CreateTag(userID uuid.UUID, req CreateTagRequest) (*models.Tag, error)
-	GetTags(userID uuid.UUID) ([]models.Tag, error)
-	GetTagByID(userID, tagID uuid.UUID) (*models.Tag, error)
-	UpdateTag(userID, tagID uuid.UUID, req UpdateTagRequest) (*models.Tag, error)
+	CreateTag(userID uuid.UUID, req dto.CreateTagRequest) (*dto.TagResponse, error)
+	GetTags(userID uuid.UUID, page, limit int) ([]dto.TagResponse, int64, error)
+	GetTagByID(userID, tagID uuid.UUID) (*dto.TagResponse, error)
+	UpdateTag(userID, tagID uuid.UUID, req dto.UpdateTagRequest) (*dto.TagResponse, error)
 	DeleteTag(userID, tagID uuid.UUID) error
 }
 
@@ -24,18 +25,19 @@ func NewTagService(repo repository.TagRepository) TagService {
 	return &tagService{repo: repo}
 }
 
-// Request DTOs
-type CreateTagRequest struct {
-	Name  string `json:"name" binding:"required"`
-	Color string `json:"color"`
+// Mapper
+func mapTagToResponse(tag *models.Tag) *dto.TagResponse {
+	if tag == nil {
+		return nil
+	}
+	return &dto.TagResponse{
+		ID:    tag.ID,
+		Name:  tag.Name,
+		Color: tag.Color,
+	}
 }
 
-type UpdateTagRequest struct {
-	Name  string `json:"name" binding:"required"`
-	Color string `json:"color"`
-}
-
-func (s *tagService) CreateTag(userID uuid.UUID, req CreateTagRequest) (*models.Tag, error) {
+func (s *tagService) CreateTag(userID uuid.UUID, req dto.CreateTagRequest) (*dto.TagResponse, error) {
 	tag := &models.Tag{
 		UserID: userID,
 		Name:   req.Name,
@@ -46,14 +48,24 @@ func (s *tagService) CreateTag(userID uuid.UUID, req CreateTagRequest) (*models.
 		return nil, err
 	}
 
-	return tag, nil
+	return mapTagToResponse(tag), nil
 }
 
-func (s *tagService) GetTags(userID uuid.UUID) ([]models.Tag, error) {
-	return s.repo.GetByUserID(userID)
+func (s *tagService) GetTags(userID uuid.UUID, page, limit int) ([]dto.TagResponse, int64, error) {
+	tags, total, err := s.repo.GetByUserID(userID, page, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var responses []dto.TagResponse
+	for _, t := range tags {
+		responses = append(responses, *mapTagToResponse(&t))
+	}
+
+	return responses, total, nil
 }
 
-func (s *tagService) GetTagByID(userID, tagID uuid.UUID) (*models.Tag, error) {
+func (s *tagService) GetTagByID(userID, tagID uuid.UUID) (*dto.TagResponse, error) {
 	tag, err := s.repo.GetByID(tagID)
 	if err != nil {
 		return nil, err
@@ -61,13 +73,16 @@ func (s *tagService) GetTagByID(userID, tagID uuid.UUID) (*models.Tag, error) {
 	if tag.UserID != userID {
 		return nil, errors.New("unauthorized: tag does not belong to user")
 	}
-	return tag, nil
+	return mapTagToResponse(tag), nil
 }
 
-func (s *tagService) UpdateTag(userID, tagID uuid.UUID, req UpdateTagRequest) (*models.Tag, error) {
-	tag, err := s.GetTagByID(userID, tagID)
+func (s *tagService) UpdateTag(userID, tagID uuid.UUID, req dto.UpdateTagRequest) (*dto.TagResponse, error) {
+	tag, err := s.repo.GetByID(tagID)
 	if err != nil {
 		return nil, err
+	}
+	if tag.UserID != userID {
+		return nil, errors.New("unauthorized: tag does not belong to user")
 	}
 
 	tag.Name = req.Name
@@ -77,13 +92,16 @@ func (s *tagService) UpdateTag(userID, tagID uuid.UUID, req UpdateTagRequest) (*
 		return nil, err
 	}
 
-	return tag, nil
+	return mapTagToResponse(tag), nil
 }
 
 func (s *tagService) DeleteTag(userID, tagID uuid.UUID) error {
-	tag, err := s.GetTagByID(userID, tagID)
+	tag, err := s.repo.GetByID(tagID)
 	if err != nil {
 		return err
+	}
+	if tag.UserID != userID {
+		return errors.New("unauthorized: tag does not belong to user")
 	}
 	return s.repo.Delete(tag.ID)
 }

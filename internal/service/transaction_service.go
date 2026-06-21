@@ -2,19 +2,19 @@ package service
 
 import (
 	"errors"
+	"finvera-be/internal/dto"
 	"finvera-be/internal/models"
 	"finvera-be/internal/repository"
-	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 )
 
 type TransactionService interface {
-	CreateTransaction(userID uuid.UUID, req CreateTransactionRequest) (*models.Transaction, error)
-	GetTransactions(userID uuid.UUID) ([]models.Transaction, error)
-	GetTransactionByID(userID, transactionID uuid.UUID) (*models.Transaction, error)
-	UpdateTransaction(userID, transactionID uuid.UUID, req UpdateTransactionRequest) (*models.Transaction, error)
+	CreateTransaction(userID uuid.UUID, req dto.CreateTransactionRequest) (*dto.TransactionResponse, error)
+	GetTransactions(userID uuid.UUID, page, limit int) ([]dto.TransactionResponse, int64, error)
+	GetTransactionByID(userID, transactionID uuid.UUID) (*dto.TransactionResponse, error)
+	UpdateTransaction(userID, transactionID uuid.UUID, req dto.UpdateTransactionRequest) (*dto.TransactionResponse, error)
 	DeleteTransaction(userID, transactionID uuid.UUID) error
 }
 
@@ -39,30 +39,37 @@ func NewTransactionService(
 	}
 }
 
-// Request DTOs
-type CreateTransactionRequest struct {
-	Type            string      `json:"type" binding:"required,oneof=income expense transfer"`
-	Amount          float64     `json:"amount" binding:"required,gt=0"`
-	AccountID       uuid.UUID   `json:"accountId" binding:"required"`
-	TargetAccountID *uuid.UUID  `json:"targetAccountId"`
-	CategoryID      uuid.UUID   `json:"categoryId" binding:"required"`
-	Date            time.Time   `json:"date" binding:"required"`
-	Note            string      `json:"note"`
-	TagIDs          []uuid.UUID `json:"tagIds"`
+// Mapper
+func mapTransactionToResponse(transaction *models.Transaction) *dto.TransactionResponse {
+	if transaction == nil {
+		return nil
+	}
+
+	var targetAcc *dto.AccountResponse
+	if transaction.TargetAccount != nil {
+		targetAcc = mapAccountToResponse(transaction.TargetAccount)
+	}
+
+	var tagResponses []dto.TagResponse
+	for _, tag := range transaction.Tags {
+		tagResponses = append(tagResponses, *mapTagToResponse(&tag))
+	}
+
+	return &dto.TransactionResponse{
+		ID:            transaction.ID,
+		Type:          transaction.Type,
+		Amount:        transaction.Amount,
+		Account:       *mapAccountToResponse(&transaction.Account),
+		TargetAccount: targetAcc,
+		Category:      *mapCategoryToResponse(&transaction.Category),
+		Date:          transaction.Date,
+		Note:          transaction.Note,
+		Tags:          tagResponses,
+		CreatedAt:     transaction.CreatedAt,
+	}
 }
 
-type UpdateTransactionRequest struct {
-	Type            string      `json:"type" binding:"required,oneof=income expense transfer"`
-	Amount          float64     `json:"amount" binding:"required,gt=0"`
-	AccountID       uuid.UUID   `json:"accountId" binding:"required"`
-	TargetAccountID *uuid.UUID  `json:"targetAccountId"`
-	CategoryID      uuid.UUID   `json:"categoryId" binding:"required"`
-	Date            time.Time   `json:"date" binding:"required"`
-	Note            string      `json:"note"`
-	TagIDs          []uuid.UUID `json:"tagIds"`
-}
-
-func (s *transactionService) CreateTransaction(userID uuid.UUID, req CreateTransactionRequest) (*models.Transaction, error) {
+func (s *transactionService) CreateTransaction(userID uuid.UUID, req dto.CreateTransactionRequest) (*dto.TransactionResponse, error) {
 	// Validations
 	account, err := s.accountRepo.GetByID(req.AccountID)
 	if err != nil || account.UserID != userID {
@@ -155,15 +162,26 @@ func (s *transactionService) CreateTransaction(userID uuid.UUID, req CreateTrans
 		return nil, err
 	}
 
-	// Reload to get preloaded relations properly (e.g. Account name, Category details)
-	return s.repo.GetByID(transaction.ID)
+	// Reload to get preloaded relations properly
+	reloaded, _ := s.repo.GetByID(transaction.ID)
+	return mapTransactionToResponse(reloaded), nil
 }
 
-func (s *transactionService) GetTransactions(userID uuid.UUID) ([]models.Transaction, error) {
-	return s.repo.GetByUserID(userID)
+func (s *transactionService) GetTransactions(userID uuid.UUID, page, limit int) ([]dto.TransactionResponse, int64, error) {
+	transactions, total, err := s.repo.GetByUserID(userID, page, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var responses []dto.TransactionResponse
+	for _, t := range transactions {
+		responses = append(responses, *mapTransactionToResponse(&t))
+	}
+
+	return responses, total, nil
 }
 
-func (s *transactionService) GetTransactionByID(userID, transactionID uuid.UUID) (*models.Transaction, error) {
+func (s *transactionService) GetTransactionByID(userID, transactionID uuid.UUID) (*dto.TransactionResponse, error) {
 	transaction, err := s.repo.GetByID(transactionID)
 	if err != nil {
 		return nil, err
@@ -171,7 +189,7 @@ func (s *transactionService) GetTransactionByID(userID, transactionID uuid.UUID)
 	if transaction.UserID != userID {
 		return nil, errors.New("unauthorized: transaction does not belong to user")
 	}
-	return transaction, nil
+	return mapTransactionToResponse(transaction), nil
 }
 
 // RevertBalance is a helper function to reverse the effect of a transaction on balances
@@ -205,16 +223,20 @@ func (s *transactionService) revertBalance(tx *gorm.DB, transaction *models.Tran
 	return nil
 }
 
-func (s *transactionService) UpdateTransaction(userID, transactionID uuid.UUID, req UpdateTransactionRequest) (*models.Transaction, error) {
+func (s *transactionService) UpdateTransaction(userID, transactionID uuid.UUID, req dto.UpdateTransactionRequest) (*dto.TransactionResponse, error) {
 	// Updating a transaction requires reverting its old impact and applying the new impact
 	
 	// We'll delete the old one and create a new one to ensure everything runs perfectly in tx, 
 	// or we can manually update fields and balances.
 	// For full safety, let's revert the old balances, update fields, and apply new balances.
 
-	transaction, err := s.GetTransactionByID(userID, transactionID)
+	// Since GetTransactionByID returns DTO now, we have to get the raw model directly from Repo.
+	transaction, err := s.repo.GetByID(transactionID)
 	if err != nil {
 		return nil, err
+	}
+	if transaction.UserID != userID {
+		return nil, errors.New("unauthorized: transaction does not belong to user")
 	}
 
 	// For simplicity in a robust way, let's just reuse Delete & Create logic by making a DB transaction here
@@ -311,13 +333,17 @@ func (s *transactionService) UpdateTransaction(userID, transactionID uuid.UUID, 
 		return nil, err
 	}
 
-	return s.repo.GetByID(transactionID)
+	reloaded, _ := s.repo.GetByID(transactionID)
+	return mapTransactionToResponse(reloaded), nil
 }
 
 func (s *transactionService) DeleteTransaction(userID, transactionID uuid.UUID) error {
-	transaction, err := s.GetTransactionByID(userID, transactionID)
+	transaction, err := s.repo.GetByID(transactionID)
 	if err != nil {
 		return err
+	}
+	if transaction.UserID != userID {
+		return errors.New("unauthorized: transaction does not belong to user")
 	}
 
 	db := s.repo.GetDB()

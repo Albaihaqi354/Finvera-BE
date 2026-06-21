@@ -9,7 +9,7 @@ import (
 
 type TagRepository interface {
 	Create(tag *models.Tag) error
-	GetByUserID(userID uuid.UUID) ([]models.Tag, error)
+	GetByUserID(userID uuid.UUID, page, limit int) ([]models.Tag, int64, error)
 	GetByID(id uuid.UUID) (*models.Tag, error)
 	Update(tag *models.Tag) error
 	Delete(id uuid.UUID) error
@@ -27,10 +27,21 @@ func (r *tagRepository) Create(tag *models.Tag) error {
 	return r.db.Create(tag).Error
 }
 
-func (r *tagRepository) GetByUserID(userID uuid.UUID) ([]models.Tag, error) {
+func (r *tagRepository) GetByUserID(userID uuid.UUID, page, limit int) ([]models.Tag, int64, error) {
 	var tags []models.Tag
-	err := r.db.Where("user_id = ?", userID).Order("name asc").Find(&tags).Error
-	return tags, err
+	var total int64
+
+	query := r.db.Where("user_id = ?", userID)
+
+	err := query.Model(&models.Tag{}).Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * limit
+	err = query.Order("name asc").Offset(offset).Limit(limit).Find(&tags).Error
+	
+	return tags, total, err
 }
 
 func (r *tagRepository) GetByID(id uuid.UUID) (*models.Tag, error) {

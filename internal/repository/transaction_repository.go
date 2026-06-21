@@ -10,7 +10,7 @@ import (
 type TransactionRepository interface {
 	CreateWithTx(tx *gorm.DB, transaction *models.Transaction) error
 	DeleteWithTx(tx *gorm.DB, id uuid.UUID) error
-	GetByUserID(userID uuid.UUID) ([]models.Transaction, error)
+	GetByUserID(userID uuid.UUID, page, limit int) ([]models.Transaction, int64, error)
 	GetByID(id uuid.UUID) (*models.Transaction, error)
 	GetDB() *gorm.DB
 }
@@ -35,17 +35,27 @@ func (r *transactionRepository) DeleteWithTx(tx *gorm.DB, id uuid.UUID) error {
 	return tx.Delete(&models.Transaction{}, "id = ?", id).Error
 }
 
-func (r *transactionRepository) GetByUserID(userID uuid.UUID) ([]models.Transaction, error) {
+func (r *transactionRepository) GetByUserID(userID uuid.UUID, page, limit int) ([]models.Transaction, int64, error) {
 	var transactions []models.Transaction
-	// Preload Account, Category, TargetAccount, and Tags
-	err := r.db.Where("user_id = ?", userID).
-		Preload("Account").
+	var total int64
+
+	query := r.db.Where("user_id = ?", userID)
+
+	err := query.Model(&models.Transaction{}).Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * limit
+	err = query.Preload("Account").
 		Preload("TargetAccount").
 		Preload("Category").
 		Preload("Tags").
 		Order("date desc, created_at desc").
+		Offset(offset).Limit(limit).
 		Find(&transactions).Error
-	return transactions, err
+		
+	return transactions, total, err
 }
 
 func (r *transactionRepository) GetByID(id uuid.UUID) (*models.Transaction, error) {

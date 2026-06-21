@@ -2,18 +2,18 @@ package service
 
 import (
 	"errors"
+	"finvera-be/internal/dto"
 	"finvera-be/internal/models"
 	"finvera-be/internal/repository"
-	"time"
 
 	"github.com/google/uuid"
 )
 
 type ScheduledTransactionService interface {
-	CreateScheduled(userID uuid.UUID, req CreateScheduledRequest) (*models.ScheduledTransaction, error)
-	GetScheduleds(userID uuid.UUID) ([]models.ScheduledTransaction, error)
-	GetScheduledByID(userID, scheduledID uuid.UUID) (*models.ScheduledTransaction, error)
-	UpdateScheduled(userID, scheduledID uuid.UUID, req UpdateScheduledRequest) (*models.ScheduledTransaction, error)
+	CreateScheduled(userID uuid.UUID, req dto.CreateScheduledRequest) (*dto.ScheduledTransactionResponse, error)
+	GetScheduleds(userID uuid.UUID, page, limit int) ([]dto.ScheduledTransactionResponse, int64, error)
+	GetScheduledByID(userID, scheduledID uuid.UUID) (*dto.ScheduledTransactionResponse, error)
+	UpdateScheduled(userID, scheduledID uuid.UUID, req dto.UpdateScheduledRequest) (*dto.ScheduledTransactionResponse, error)
 	DeleteScheduled(userID, scheduledID uuid.UUID) error
 }
 
@@ -35,34 +35,34 @@ func NewScheduledTransactionService(
 	}
 }
 
-// Request DTOs
-type CreateScheduledRequest struct {
-	Name            string     `json:"name" binding:"required"`
-	Type            string     `json:"type" binding:"required,oneof=income expense transfer"`
-	Amount          float64    `json:"amount" binding:"required,gt=0"`
-	AccountID       uuid.UUID  `json:"accountId" binding:"required"`
-	TargetAccountID *uuid.UUID `json:"targetAccountId"`
-	CategoryID      uuid.UUID  `json:"categoryId" binding:"required"`
-	Note            string     `json:"note"`
-	Frequency       string     `json:"frequency" binding:"required,oneof=daily weekly monthly yearly"`
-	NextRun         time.Time  `json:"nextRun" binding:"required"`
-	IsActive        bool       `json:"isActive"`
+// Mapper
+func mapScheduledToResponse(scheduled *models.ScheduledTransaction) *dto.ScheduledTransactionResponse {
+	if scheduled == nil {
+		return nil
+	}
+
+	var targetAcc *dto.AccountResponse
+	if scheduled.TargetAccount != nil {
+		targetAcc = mapAccountToResponse(scheduled.TargetAccount)
+	}
+
+	return &dto.ScheduledTransactionResponse{
+		ID:            scheduled.ID,
+		Name:          scheduled.Name,
+		Type:          scheduled.Type,
+		Amount:        scheduled.Amount,
+		Account:       *mapAccountToResponse(&scheduled.Account),
+		TargetAccount: targetAcc,
+		Category:      *mapCategoryToResponse(&scheduled.Category),
+		Note:          scheduled.Note,
+		Frequency:     scheduled.Frequency,
+		NextRun:       scheduled.NextRun,
+		LastRun:       nil,
+		IsActive:      scheduled.IsActive,
+	}
 }
 
-type UpdateScheduledRequest struct {
-	Name            string     `json:"name" binding:"required"`
-	Type            string     `json:"type" binding:"required,oneof=income expense transfer"`
-	Amount          float64    `json:"amount" binding:"required,gt=0"`
-	AccountID       uuid.UUID  `json:"accountId" binding:"required"`
-	TargetAccountID *uuid.UUID `json:"targetAccountId"`
-	CategoryID      uuid.UUID  `json:"categoryId" binding:"required"`
-	Note            string     `json:"note"`
-	Frequency       string     `json:"frequency" binding:"required,oneof=daily weekly monthly yearly"`
-	NextRun         time.Time  `json:"nextRun" binding:"required"`
-	IsActive        bool       `json:"isActive"`
-}
-
-func (s *scheduledTransactionService) CreateScheduled(userID uuid.UUID, req CreateScheduledRequest) (*models.ScheduledTransaction, error) {
+func (s *scheduledTransactionService) CreateScheduled(userID uuid.UUID, req dto.CreateScheduledRequest) (*dto.ScheduledTransactionResponse, error) {
 	// Validations
 	account, err := s.accountRepo.GetByID(req.AccountID)
 	if err != nil || account.UserID != userID {
@@ -105,14 +105,25 @@ func (s *scheduledTransactionService) CreateScheduled(userID uuid.UUID, req Crea
 		return nil, err
 	}
 
-	return s.repo.GetByID(scheduled.ID)
+	reloaded, _ := s.repo.GetByID(scheduled.ID)
+	return mapScheduledToResponse(reloaded), nil
 }
 
-func (s *scheduledTransactionService) GetScheduleds(userID uuid.UUID) ([]models.ScheduledTransaction, error) {
-	return s.repo.GetByUserID(userID)
+func (s *scheduledTransactionService) GetScheduleds(userID uuid.UUID, page, limit int) ([]dto.ScheduledTransactionResponse, int64, error) {
+	scheduleds, total, err := s.repo.GetByUserID(userID, page, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var responses []dto.ScheduledTransactionResponse
+	for _, sched := range scheduleds {
+		responses = append(responses, *mapScheduledToResponse(&sched))
+	}
+
+	return responses, total, nil
 }
 
-func (s *scheduledTransactionService) GetScheduledByID(userID, scheduledID uuid.UUID) (*models.ScheduledTransaction, error) {
+func (s *scheduledTransactionService) GetScheduledByID(userID, scheduledID uuid.UUID) (*dto.ScheduledTransactionResponse, error) {
 	scheduled, err := s.repo.GetByID(scheduledID)
 	if err != nil {
 		return nil, err
@@ -120,13 +131,16 @@ func (s *scheduledTransactionService) GetScheduledByID(userID, scheduledID uuid.
 	if scheduled.UserID != userID {
 		return nil, errors.New("unauthorized: scheduled transaction does not belong to user")
 	}
-	return scheduled, nil
+	return mapScheduledToResponse(scheduled), nil
 }
 
-func (s *scheduledTransactionService) UpdateScheduled(userID, scheduledID uuid.UUID, req UpdateScheduledRequest) (*models.ScheduledTransaction, error) {
-	scheduled, err := s.GetScheduledByID(userID, scheduledID)
+func (s *scheduledTransactionService) UpdateScheduled(userID, scheduledID uuid.UUID, req dto.UpdateScheduledRequest) (*dto.ScheduledTransactionResponse, error) {
+	scheduled, err := s.repo.GetByID(scheduledID)
 	if err != nil {
 		return nil, err
+	}
+	if scheduled.UserID != userID {
+		return nil, errors.New("unauthorized: scheduled transaction does not belong to user")
 	}
 
 	// Validations
@@ -168,13 +182,17 @@ func (s *scheduledTransactionService) UpdateScheduled(userID, scheduledID uuid.U
 		return nil, err
 	}
 
-	return s.repo.GetByID(scheduledID)
+	reloaded, _ := s.repo.GetByID(scheduledID)
+	return mapScheduledToResponse(reloaded), nil
 }
 
 func (s *scheduledTransactionService) DeleteScheduled(userID, scheduledID uuid.UUID) error {
-	scheduled, err := s.GetScheduledByID(userID, scheduledID)
+	scheduled, err := s.repo.GetByID(scheduledID)
 	if err != nil {
 		return err
+	}
+	if scheduled.UserID != userID {
+		return errors.New("unauthorized: scheduled transaction does not belong to user")
 	}
 	return s.repo.Delete(scheduled.ID)
 }

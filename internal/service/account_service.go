@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"finvera-be/internal/dto"
 	"finvera-be/internal/models"
 	"finvera-be/internal/repository"
 
@@ -9,10 +10,10 @@ import (
 )
 
 type AccountService interface {
-	CreateAccount(userID uuid.UUID, req CreateAccountRequest) (*models.Account, error)
-	GetAccounts(userID uuid.UUID) ([]models.Account, error)
-	GetAccountByID(userID, accountID uuid.UUID) (*models.Account, error)
-	UpdateAccount(userID, accountID uuid.UUID, req UpdateAccountRequest) (*models.Account, error)
+	CreateAccount(userID uuid.UUID, req dto.CreateAccountRequest) (*dto.AccountResponse, error)
+	GetAccounts(userID uuid.UUID, page, limit int) ([]dto.AccountResponse, int64, error)
+	GetAccountByID(userID, accountID uuid.UUID) (*dto.AccountResponse, error)
+	UpdateAccount(userID, accountID uuid.UUID, req dto.UpdateAccountRequest) (*dto.AccountResponse, error)
 	DeleteAccount(userID, accountID uuid.UUID) error
 }
 
@@ -24,28 +25,25 @@ func NewAccountService(repo repository.AccountRepository) AccountService {
 	return &accountService{repo: repo}
 }
 
-// Request DTOs
-type CreateAccountRequest struct {
-	Name           string  `json:"name" binding:"required"`
-	Type           string  `json:"type" binding:"required,oneof=asset liability"`
-	Currency       string  `json:"currency"`
-	Icon           string  `json:"icon"`
-	Color          string  `json:"color"`
-	InitialBalance float64 `json:"initialBalance"`
-	Note           string  `json:"note"`
+// Mapper
+func mapAccountToResponse(account *models.Account) *dto.AccountResponse {
+	if account == nil {
+		return nil
+	}
+	return &dto.AccountResponse{
+		ID:             account.ID,
+		Name:           account.Name,
+		Type:           account.Type,
+		Currency:       account.Currency,
+		Icon:           account.Icon,
+		Color:          account.Color,
+		Balance:        account.Balance,
+		InitialBalance: account.InitialBalance,
+		Note:           account.Note,
+	}
 }
 
-type UpdateAccountRequest struct {
-	Name           string  `json:"name" binding:"required"`
-	Type           string  `json:"type" binding:"required,oneof=asset liability"`
-	Currency       string  `json:"currency"`
-	Icon           string  `json:"icon"`
-	Color          string  `json:"color"`
-	InitialBalance float64 `json:"initialBalance"`
-	Note           string  `json:"note"`
-}
-
-func (s *accountService) CreateAccount(userID uuid.UUID, req CreateAccountRequest) (*models.Account, error) {
+func (s *accountService) CreateAccount(userID uuid.UUID, req dto.CreateAccountRequest) (*dto.AccountResponse, error) {
 	currency := req.Currency
 	if currency == "" {
 		currency = "IDR"
@@ -66,14 +64,24 @@ func (s *accountService) CreateAccount(userID uuid.UUID, req CreateAccountReques
 		return nil, err
 	}
 
-	return account, nil
+	return mapAccountToResponse(account), nil
 }
 
-func (s *accountService) GetAccounts(userID uuid.UUID) ([]models.Account, error) {
-	return s.repo.GetByUserID(userID)
+func (s *accountService) GetAccounts(userID uuid.UUID, page, limit int) ([]dto.AccountResponse, int64, error) {
+	accounts, total, err := s.repo.GetByUserID(userID, page, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var responses []dto.AccountResponse
+	for _, acc := range accounts {
+		responses = append(responses, *mapAccountToResponse(&acc))
+	}
+
+	return responses, total, nil
 }
 
-func (s *accountService) GetAccountByID(userID, accountID uuid.UUID) (*models.Account, error) {
+func (s *accountService) GetAccountByID(userID, accountID uuid.UUID) (*dto.AccountResponse, error) {
 	account, err := s.repo.GetByID(accountID)
 	if err != nil {
 		return nil, err
@@ -82,13 +90,16 @@ func (s *accountService) GetAccountByID(userID, accountID uuid.UUID) (*models.Ac
 	if account.UserID != userID {
 		return nil, errors.New("unauthorized: account does not belong to user")
 	}
-	return account, nil
+	return mapAccountToResponse(account), nil
 }
 
-func (s *accountService) UpdateAccount(userID, accountID uuid.UUID, req UpdateAccountRequest) (*models.Account, error) {
-	account, err := s.GetAccountByID(userID, accountID)
+func (s *accountService) UpdateAccount(userID, accountID uuid.UUID, req dto.UpdateAccountRequest) (*dto.AccountResponse, error) {
+	account, err := s.repo.GetByID(accountID)
 	if err != nil {
 		return nil, err
+	}
+	if account.UserID != userID {
+		return nil, errors.New("unauthorized: account does not belong to user")
 	}
 
 	account.Name = req.Name
@@ -105,13 +116,16 @@ func (s *accountService) UpdateAccount(userID, accountID uuid.UUID, req UpdateAc
 		return nil, err
 	}
 
-	return account, nil
+	return mapAccountToResponse(account), nil
 }
 
 func (s *accountService) DeleteAccount(userID, accountID uuid.UUID) error {
-	account, err := s.GetAccountByID(userID, accountID)
+	account, err := s.repo.GetByID(accountID)
 	if err != nil {
 		return err
+	}
+	if account.UserID != userID {
+		return errors.New("unauthorized: account does not belong to user")
 	}
 	return s.repo.Delete(account.ID)
 }

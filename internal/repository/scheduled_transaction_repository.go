@@ -9,7 +9,7 @@ import (
 
 type ScheduledTransactionRepository interface {
 	Create(scheduled *models.ScheduledTransaction) error
-	GetByUserID(userID uuid.UUID) ([]models.ScheduledTransaction, error)
+	GetByUserID(userID uuid.UUID, page, limit int) ([]models.ScheduledTransaction, int64, error)
 	GetByID(id uuid.UUID) (*models.ScheduledTransaction, error)
 	Update(scheduled *models.ScheduledTransaction) error
 	Delete(id uuid.UUID) error
@@ -27,15 +27,26 @@ func (r *scheduledTransactionRepository) Create(scheduled *models.ScheduledTrans
 	return r.db.Create(scheduled).Error
 }
 
-func (r *scheduledTransactionRepository) GetByUserID(userID uuid.UUID) ([]models.ScheduledTransaction, error) {
+func (r *scheduledTransactionRepository) GetByUserID(userID uuid.UUID, page, limit int) ([]models.ScheduledTransaction, int64, error) {
 	var scheduleds []models.ScheduledTransaction
-	err := r.db.Where("user_id = ?", userID).
-		Preload("Account").
+	var total int64
+
+	query := r.db.Where("user_id = ?", userID)
+
+	err := query.Model(&models.ScheduledTransaction{}).Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * limit
+	err = query.Preload("Account").
 		Preload("TargetAccount").
 		Preload("Category").
 		Order("next_run asc").
+		Offset(offset).Limit(limit).
 		Find(&scheduleds).Error
-	return scheduleds, err
+		
+	return scheduleds, total, err
 }
 
 func (r *scheduledTransactionRepository) GetByID(id uuid.UUID) (*models.ScheduledTransaction, error) {

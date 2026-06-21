@@ -9,7 +9,7 @@ import (
 
 type CategoryRepository interface {
 	Create(category *models.Category) error
-	GetAvailableForUser(userID uuid.UUID) ([]models.Category, error)
+	GetAvailableForUser(userID uuid.UUID, page, limit int) ([]models.Category, int64, error)
 	GetByID(id uuid.UUID) (*models.Category, error)
 	Update(category *models.Category) error
 	Delete(id uuid.UUID) error
@@ -27,14 +27,23 @@ func (r *categoryRepository) Create(category *models.Category) error {
 	return r.db.Create(category).Error
 }
 
-func (r *categoryRepository) GetAvailableForUser(userID uuid.UUID) ([]models.Category, error) {
+func (r *categoryRepository) GetAvailableForUser(userID uuid.UUID, page, limit int) ([]models.Category, int64, error) {
 	var categories []models.Category
-	// Get categories where user_id matches OR user_id is null (system defaults)
-	// Order by type and sort_order
-	err := r.db.Where("user_id = ? OR user_id IS NULL", userID).
-		Order("type asc, sort_order asc, created_at asc").
-		Find(&categories).Error
-	return categories, err
+	var total int64
+
+	query := r.db.Where("user_id = ? OR user_id IS NULL", userID)
+
+	// Get total count
+	err := query.Model(&models.Category{}).Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated data
+	offset := (page - 1) * limit
+	err = query.Order("type asc, sort_order asc, created_at asc").Offset(offset).Limit(limit).Find(&categories).Error
+	
+	return categories, total, err
 }
 
 func (r *categoryRepository) GetByID(id uuid.UUID) (*models.Category, error) {

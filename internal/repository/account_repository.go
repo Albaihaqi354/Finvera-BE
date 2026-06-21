@@ -9,7 +9,7 @@ import (
 
 type AccountRepository interface {
 	Create(account *models.Account) error
-	GetByUserID(userID uuid.UUID) ([]models.Account, error)
+	GetByUserID(userID uuid.UUID, page, limit int) ([]models.Account, int64, error)
 	GetByID(id uuid.UUID) (*models.Account, error)
 	Update(account *models.Account) error
 	Delete(id uuid.UUID) error
@@ -27,11 +27,23 @@ func (r *accountRepository) Create(account *models.Account) error {
 	return r.db.Create(account).Error
 }
 
-func (r *accountRepository) GetByUserID(userID uuid.UUID) ([]models.Account, error) {
+func (r *accountRepository) GetByUserID(userID uuid.UUID, page, limit int) ([]models.Account, int64, error) {
 	var accounts []models.Account
-	// Use order by sort_order ascending
-	err := r.db.Where("user_id = ?", userID).Order("sort_order asc, created_at asc").Find(&accounts).Error
-	return accounts, err
+	var total int64
+
+	query := r.db.Where("user_id = ?", userID)
+	
+	// Get total count
+	err := query.Model(&models.Account{}).Count(&total).Error
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated data
+	offset := (page - 1) * limit
+	err = query.Order("sort_order asc, created_at asc").Offset(offset).Limit(limit).Find(&accounts).Error
+	
+	return accounts, total, err
 }
 
 func (r *accountRepository) GetByID(id uuid.UUID) (*models.Account, error) {

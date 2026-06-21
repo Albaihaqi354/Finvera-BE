@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"finvera-be/internal/dto"
 	"finvera-be/internal/models"
 	"finvera-be/internal/repository"
 
@@ -9,10 +10,10 @@ import (
 )
 
 type CategoryService interface {
-	CreateCategory(userID uuid.UUID, req CreateCategoryRequest) (*models.Category, error)
-	GetCategories(userID uuid.UUID) ([]models.Category, error)
-	GetCategoryByID(userID, categoryID uuid.UUID) (*models.Category, error)
-	UpdateCategory(userID, categoryID uuid.UUID, req UpdateCategoryRequest) (*models.Category, error)
+	CreateCategory(userID uuid.UUID, req dto.CreateCategoryRequest) (*dto.CategoryResponse, error)
+	GetCategories(userID uuid.UUID, page, limit int) ([]dto.CategoryResponse, int64, error)
+	GetCategoryByID(userID, categoryID uuid.UUID) (*dto.CategoryResponse, error)
+	UpdateCategory(userID, categoryID uuid.UUID, req dto.UpdateCategoryRequest) (*dto.CategoryResponse, error)
 	DeleteCategory(userID, categoryID uuid.UUID) error
 }
 
@@ -24,26 +25,24 @@ func NewCategoryService(repo repository.CategoryRepository) CategoryService {
 	return &categoryService{repo: repo}
 }
 
-// Request DTOs
-type CreateCategoryRequest struct {
-	Name      string  `json:"name" binding:"required"`
-	Type      string  `json:"type" binding:"required,oneof=income expense transfer"`
-	Icon      string  `json:"icon"`
-	Color     string  `json:"color"`
-	SortOrder int     `json:"sortOrder"`
-	Note      string  `json:"note"`
+// Mapper
+func mapCategoryToResponse(category *models.Category) *dto.CategoryResponse {
+	if category == nil {
+		return nil
+	}
+	return &dto.CategoryResponse{
+		ID:        category.ID,
+		Name:      category.Name,
+		Type:      category.Type,
+		Icon:      category.Icon,
+		Color:     category.Color,
+		SortOrder: category.SortOrder,
+		Note:      category.Note,
+		IsSystem:  category.UserID == uuid.Nil,
+	}
 }
 
-type UpdateCategoryRequest struct {
-	Name      string  `json:"name" binding:"required"`
-	Type      string  `json:"type" binding:"required,oneof=income expense transfer"`
-	Icon      string  `json:"icon"`
-	Color     string  `json:"color"`
-	SortOrder int     `json:"sortOrder"`
-	Note      string  `json:"note"`
-}
-
-func (s *categoryService) CreateCategory(userID uuid.UUID, req CreateCategoryRequest) (*models.Category, error) {
+func (s *categoryService) CreateCategory(userID uuid.UUID, req dto.CreateCategoryRequest) (*dto.CategoryResponse, error) {
 	category := &models.Category{
 		UserID:    userID,
 		Name:      req.Name,
@@ -58,14 +57,24 @@ func (s *categoryService) CreateCategory(userID uuid.UUID, req CreateCategoryReq
 		return nil, err
 	}
 
-	return category, nil
+	return mapCategoryToResponse(category), nil
 }
 
-func (s *categoryService) GetCategories(userID uuid.UUID) ([]models.Category, error) {
-	return s.repo.GetAvailableForUser(userID)
+func (s *categoryService) GetCategories(userID uuid.UUID, page, limit int) ([]dto.CategoryResponse, int64, error) {
+	categories, total, err := s.repo.GetAvailableForUser(userID, page, limit)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	var responses []dto.CategoryResponse
+	for _, cat := range categories {
+		responses = append(responses, *mapCategoryToResponse(&cat))
+	}
+
+	return responses, total, nil
 }
 
-func (s *categoryService) GetCategoryByID(userID, categoryID uuid.UUID) (*models.Category, error) {
+func (s *categoryService) GetCategoryByID(userID, categoryID uuid.UUID) (*dto.CategoryResponse, error) {
 	category, err := s.repo.GetByID(categoryID)
 	if err != nil {
 		return nil, err
@@ -76,10 +85,10 @@ func (s *categoryService) GetCategoryByID(userID, categoryID uuid.UUID) (*models
 		return nil, errors.New("unauthorized: you do not have permission to access this category")
 	}
 
-	return category, nil
+	return mapCategoryToResponse(category), nil
 }
 
-func (s *categoryService) UpdateCategory(userID, categoryID uuid.UUID, req UpdateCategoryRequest) (*models.Category, error) {
+func (s *categoryService) UpdateCategory(userID, categoryID uuid.UUID, req dto.UpdateCategoryRequest) (*dto.CategoryResponse, error) {
 	category, err := s.repo.GetByID(categoryID)
 	if err != nil {
 		return nil, err
@@ -106,7 +115,7 @@ func (s *categoryService) UpdateCategory(userID, categoryID uuid.UUID, req Updat
 		return nil, err
 	}
 
-	return category, nil
+	return mapCategoryToResponse(category), nil
 }
 
 func (s *categoryService) DeleteCategory(userID, categoryID uuid.UUID) error {
