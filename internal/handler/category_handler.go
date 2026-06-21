@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"finvera-be/internal/dto"
 	"finvera-be/internal/service"
 	"net/http"
 
@@ -22,32 +23,32 @@ func NewCategoryHandler(categoryService service.CategoryService) *CategoryHandle
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param request body service.CreateCategoryRequest true "Create Category Request"
-// @Success 201 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Router /api/v1/categories [post]
+// @Param request body dto.CreateCategoryRequest true "Create Category Request"
+// @Success 201 {object} dto.Response
+// @Failure 400 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Router /categories [post]
 func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
-	var req service.CreateCategoryRequest
+	var req dto.CreateCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error()))
 		return
 	}
 
 	category, err := h.categoryService.CreateCategory(userID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Category created successfully", "data": category})
+	c.JSON(http.StatusCreated, dto.SuccessResponse("Category created successfully", category))
 }
 
 // @Summary Get all categories
@@ -55,24 +56,28 @@ func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 // @Tags Categories
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Router /api/v1/categories [get]
+// @Param page query int false "Page number"
+// @Param limit query int false "Items per page"
+// @Success 200 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Router /categories [get]
 func (h *CategoryHandler) GetCategories(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
-	categories, err := h.categoryService.GetCategories(userID)
+	page, limit := dto.GetPaginationParams(c)
+
+	categories, total, err := h.categoryService.GetCategories(userID, page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": categories})
+	c.JSON(http.StatusOK, dto.PaginatedResponse("Categories retrieved successfully", categories, page, limit, total))
 }
 
 // @Summary Get category by ID
@@ -81,34 +86,34 @@ func (h *CategoryHandler) GetCategories(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Category ID"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 403 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Router /api/v1/categories/{id} [get]
+// @Success 200 {object} dto.Response
+// @Failure 400 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Failure 403 {object} dto.Response
+// @Failure 404 {object} dto.Response
+// @Router /categories/{id} [get]
 func (h *CategoryHandler) GetCategoryByID(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
 	categoryIDStr := c.Param("id")
 	categoryID, err := uuid.Parse(categoryIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid category ID format"})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid category ID format"))
 		return
 	}
 
 	category, err := h.categoryService.GetCategoryByID(userID, categoryID)
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		c.JSON(http.StatusForbidden, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": category})
+	c.JSON(http.StatusOK, dto.SuccessResponse("Category retrieved successfully", category))
 }
 
 // @Summary Update category
@@ -118,41 +123,41 @@ func (h *CategoryHandler) GetCategoryByID(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Category ID"
-// @Param request body service.UpdateCategoryRequest true "Update Category Request"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 403 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Router /api/v1/categories/{id} [put]
+// @Param request body dto.UpdateCategoryRequest true "Update Category Request"
+// @Success 200 {object} dto.Response
+// @Failure 400 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Failure 403 {object} dto.Response
+// @Failure 404 {object} dto.Response
+// @Router /categories/{id} [put]
 func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
 	categoryIDStr := c.Param("id")
 	categoryID, err := uuid.Parse(categoryIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid category ID format"})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid category ID format"))
 		return
 	}
 
-	var req service.UpdateCategoryRequest
+	var req dto.UpdateCategoryRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error()))
 		return
 	}
 
 	category, err := h.categoryService.UpdateCategory(userID, categoryID, req)
 	if err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		c.JSON(http.StatusForbidden, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Category updated successfully", "data": category})
+	c.JSON(http.StatusOK, dto.SuccessResponse("Category updated successfully", category))
 }
 
 // @Summary Delete category
@@ -161,31 +166,31 @@ func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Category ID"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 403 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Router /api/v1/categories/{id} [delete]
+// @Success 200 {object} dto.Response
+// @Failure 400 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Failure 403 {object} dto.Response
+// @Failure 404 {object} dto.Response
+// @Router /categories/{id} [delete]
 func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
 	categoryIDStr := c.Param("id")
 	categoryID, err := uuid.Parse(categoryIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid category ID format"})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid category ID format"))
 		return
 	}
 
 	if err := h.categoryService.DeleteCategory(userID, categoryID); err != nil {
-		c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+		c.JSON(http.StatusForbidden, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Category deleted successfully"})
+	c.JSON(http.StatusOK, dto.SuccessResponse("Category deleted successfully", nil))
 }

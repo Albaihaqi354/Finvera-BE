@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"finvera-be/internal/dto"
 	"finvera-be/internal/service"
 	"net/http"
 
@@ -22,33 +23,33 @@ func NewTransactionHandler(transactionService service.TransactionService) *Trans
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param request body service.CreateTransactionRequest true "Create Transaction Request"
-// @Success 201 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/transactions [post]
+// @Param request body dto.CreateTransactionRequest true "Create Transaction Request"
+// @Success 201 {object} dto.Response
+// @Failure 400 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Failure 500 {object} dto.Response
+// @Router /transactions [post]
 func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
-	var req service.CreateTransactionRequest
+	var req dto.CreateTransactionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error()))
 		return
 	}
 
 	transaction, err := h.transactionService.CreateTransaction(userID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Transaction created successfully", "data": transaction})
+	c.JSON(http.StatusCreated, dto.SuccessResponse("Transaction created successfully", transaction))
 }
 
 // @Summary Get all transactions
@@ -56,24 +57,28 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 // @Tags Transactions
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Router /api/v1/transactions [get]
+// @Param page query int false "Page number"
+// @Param limit query int false "Items per page"
+// @Success 200 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Router /transactions [get]
 func (h *TransactionHandler) GetTransactions(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
-	transactions, err := h.transactionService.GetTransactions(userID)
+	page, limit := dto.GetPaginationParams(c)
+
+	transactions, total, err := h.transactionService.GetTransactions(userID, page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": transactions})
+	c.JSON(http.StatusOK, dto.PaginatedResponse("Transactions retrieved successfully", transactions, page, limit, total))
 }
 
 // @Summary Get transaction by ID
@@ -82,33 +87,33 @@ func (h *TransactionHandler) GetTransactions(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Transaction ID"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Router /api/v1/transactions/{id} [get]
+// @Success 200 {object} dto.Response
+// @Failure 400 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Failure 404 {object} dto.Response
+// @Router /transactions/{id} [get]
 func (h *TransactionHandler) GetTransactionByID(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
 	transactionIDStr := c.Param("id")
 	transactionID, err := uuid.Parse(transactionIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid transaction ID format"})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid transaction ID format"))
 		return
 	}
 
 	transaction, err := h.transactionService.GetTransactionByID(userID, transactionID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": transaction})
+	c.JSON(http.StatusOK, dto.SuccessResponse("Transaction retrieved successfully", transaction))
 }
 
 // @Summary Update transaction
@@ -118,40 +123,40 @@ func (h *TransactionHandler) GetTransactionByID(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Transaction ID"
-// @Param request body service.UpdateTransactionRequest true "Update Transaction Request"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/transactions/{id} [put]
+// @Param request body dto.UpdateTransactionRequest true "Update Transaction Request"
+// @Success 200 {object} dto.Response
+// @Failure 400 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Failure 500 {object} dto.Response
+// @Router /transactions/{id} [put]
 func (h *TransactionHandler) UpdateTransaction(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
 	transactionIDStr := c.Param("id")
 	transactionID, err := uuid.Parse(transactionIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid transaction ID format"})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid transaction ID format"))
 		return
 	}
 
-	var req service.UpdateTransactionRequest
+	var req dto.UpdateTransactionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error()))
 		return
 	}
 
 	transaction, err := h.transactionService.UpdateTransaction(userID, transactionID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Transaction updated successfully", "data": transaction})
+	c.JSON(http.StatusOK, dto.SuccessResponse("Transaction updated successfully", transaction))
 }
 
 // @Summary Delete transaction
@@ -160,30 +165,30 @@ func (h *TransactionHandler) UpdateTransaction(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Transaction ID"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /api/v1/transactions/{id} [delete]
+// @Success 200 {object} dto.Response
+// @Failure 400 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Failure 500 {object} dto.Response
+// @Router /transactions/{id} [delete]
 func (h *TransactionHandler) DeleteTransaction(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
 	transactionIDStr := c.Param("id")
 	transactionID, err := uuid.Parse(transactionIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid transaction ID format"})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid transaction ID format"))
 		return
 	}
 
 	if err := h.transactionService.DeleteTransaction(userID, transactionID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Transaction deleted successfully"})
+	c.JSON(http.StatusOK, dto.SuccessResponse("Transaction deleted successfully", nil))
 }

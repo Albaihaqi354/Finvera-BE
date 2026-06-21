@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"finvera-be/internal/dto"
 	"finvera-be/internal/service"
 	"net/http"
 
@@ -22,32 +23,32 @@ func NewTagHandler(tagService service.TagService) *TagHandler {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param request body service.CreateTagRequest true "Create Tag Request"
-// @Success 201 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Router /api/v1/tags [post]
+// @Param request body dto.CreateTagRequest true "Create Tag Request"
+// @Success 201 {object} dto.Response
+// @Failure 400 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Router /tags [post]
 func (h *TagHandler) CreateTag(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
-	var req service.CreateTagRequest
+	var req dto.CreateTagRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error()))
 		return
 	}
 
 	tag, err := h.tagService.CreateTag(userID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Tag created successfully", "data": tag})
+	c.JSON(http.StatusCreated, dto.SuccessResponse("Tag created successfully", tag))
 }
 
 // @Summary Get all tags
@@ -55,24 +56,28 @@ func (h *TagHandler) CreateTag(c *gin.Context) {
 // @Tags Tags
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Router /api/v1/tags [get]
+// @Param page query int false "Page number"
+// @Param limit query int false "Items per page"
+// @Success 200 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Router /tags [get]
 func (h *TagHandler) GetTags(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
-	tags, err := h.tagService.GetTags(userID)
+	page, limit := dto.GetPaginationParams(c)
+
+	tags, total, err := h.tagService.GetTags(userID, page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": tags})
+	c.JSON(http.StatusOK, dto.PaginatedResponse("Tags retrieved successfully", tags, page, limit, total))
 }
 
 // @Summary Get tag by ID
@@ -81,33 +86,33 @@ func (h *TagHandler) GetTags(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Tag ID"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Router /api/v1/tags/{id} [get]
+// @Success 200 {object} dto.Response
+// @Failure 400 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Failure 404 {object} dto.Response
+// @Router /tags/{id} [get]
 func (h *TagHandler) GetTagByID(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
 	tagIDStr := c.Param("id")
 	tagID, err := uuid.Parse(tagIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tag ID format"})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid tag ID format"))
 		return
 	}
 
 	tag, err := h.tagService.GetTagByID(userID, tagID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": tag})
+	c.JSON(http.StatusOK, dto.SuccessResponse("Tag retrieved successfully", tag))
 }
 
 // @Summary Update tag
@@ -117,40 +122,40 @@ func (h *TagHandler) GetTagByID(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Tag ID"
-// @Param request body service.UpdateTagRequest true "Update Tag Request"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Router /api/v1/tags/{id} [put]
+// @Param request body dto.UpdateTagRequest true "Update Tag Request"
+// @Success 200 {object} dto.Response
+// @Failure 400 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Failure 404 {object} dto.Response
+// @Router /tags/{id} [put]
 func (h *TagHandler) UpdateTag(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
 	tagIDStr := c.Param("id")
 	tagID, err := uuid.Parse(tagIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tag ID format"})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid tag ID format"))
 		return
 	}
 
-	var req service.UpdateTagRequest
+	var req dto.UpdateTagRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error()))
 		return
 	}
 
 	tag, err := h.tagService.UpdateTag(userID, tagID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Tag updated successfully", "data": tag})
+	c.JSON(http.StatusOK, dto.SuccessResponse("Tag updated successfully", tag))
 }
 
 // @Summary Delete tag
@@ -159,30 +164,30 @@ func (h *TagHandler) UpdateTag(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Tag ID"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Router /api/v1/tags/{id} [delete]
+// @Success 200 {object} dto.Response
+// @Failure 400 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Failure 404 {object} dto.Response
+// @Router /tags/{id} [delete]
 func (h *TagHandler) DeleteTag(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
 	tagIDStr := c.Param("id")
 	tagID, err := uuid.Parse(tagIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid tag ID format"})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid tag ID format"))
 		return
 	}
 
 	if err := h.tagService.DeleteTag(userID, tagID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Tag deleted successfully"})
+	c.JSON(http.StatusOK, dto.SuccessResponse("Tag deleted successfully", nil))
 }

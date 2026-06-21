@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"finvera-be/internal/dto"
 	"finvera-be/internal/service"
 	"net/http"
 
@@ -22,32 +23,32 @@ func NewAccountHandler(accountService service.AccountService) *AccountHandler {
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param request body service.CreateAccountRequest true "Create Account Request"
-// @Success 201 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Router /api/v1/accounts [post]
+// @Param request body dto.CreateAccountRequest true "Create Account Request"
+// @Success 201 {object} dto.Response
+// @Failure 400 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Router /accounts [post]
 func (h *AccountHandler) CreateAccount(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
-	var req service.CreateAccountRequest
+	var req dto.CreateAccountRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error()))
 		return
 	}
 
 	account, err := h.accountService.CreateAccount(userID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Account created successfully", "data": account})
+	c.JSON(http.StatusCreated, dto.SuccessResponse("Account created successfully", account))
 }
 
 // @Summary Get all accounts
@@ -55,24 +56,28 @@ func (h *AccountHandler) CreateAccount(c *gin.Context) {
 // @Tags Accounts
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Router /api/v1/accounts [get]
+// @Param page query int false "Page number"
+// @Param limit query int false "Items per page"
+// @Success 200 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Router /accounts [get]
 func (h *AccountHandler) GetAccounts(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
-	accounts, err := h.accountService.GetAccounts(userID)
+	page, limit := dto.GetPaginationParams(c)
+
+	accounts, total, err := h.accountService.GetAccounts(userID, page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": accounts})
+	c.JSON(http.StatusOK, dto.PaginatedResponse("Accounts retrieved successfully", accounts, page, limit, total))
 }
 
 // @Summary Get account by ID
@@ -81,32 +86,32 @@ func (h *AccountHandler) GetAccounts(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Account ID"
-// @Success 200 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Router /api/v1/accounts/{id} [get]
+// @Success 200 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Failure 404 {object} dto.Response
+// @Router /accounts/{id} [get]
 func (h *AccountHandler) GetAccountByID(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
 	accountIDStr := c.Param("id")
 	accountID, err := uuid.Parse(accountIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid account ID format"})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid account ID format"))
 		return
 	}
 
 	account, err := h.accountService.GetAccountByID(userID, accountID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+		c.JSON(http.StatusNotFound, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"data": account})
+	c.JSON(http.StatusOK, dto.SuccessResponse("Account retrieved successfully", account))
 }
 
 // @Summary Update account
@@ -116,40 +121,40 @@ func (h *AccountHandler) GetAccountByID(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Account ID"
-// @Param request body service.UpdateAccountRequest true "Update Account Request"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Router /api/v1/accounts/{id} [put]
+// @Param request body dto.UpdateAccountRequest true "Update Account Request"
+// @Success 200 {object} dto.Response
+// @Failure 400 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Failure 404 {object} dto.Response
+// @Router /accounts/{id} [put]
 func (h *AccountHandler) UpdateAccount(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
 	accountIDStr := c.Param("id")
 	accountID, err := uuid.Parse(accountIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid account ID format"})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid account ID format"))
 		return
 	}
 
-	var req service.UpdateAccountRequest
+	var req dto.UpdateAccountRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error()))
 		return
 	}
 
 	account, err := h.accountService.UpdateAccount(userID, accountID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Account updated successfully", "data": account})
+	c.JSON(http.StatusOK, dto.SuccessResponse("Account updated successfully", account))
 }
 
 // @Summary Delete account
@@ -158,29 +163,29 @@ func (h *AccountHandler) UpdateAccount(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param id path string true "Account ID"
-// @Success 200 {object} map[string]interface{}
-// @Failure 401 {object} map[string]interface{}
-// @Failure 404 {object} map[string]interface{}
-// @Router /api/v1/accounts/{id} [delete]
+// @Success 200 {object} dto.Response
+// @Failure 401 {object} dto.Response
+// @Failure 404 {object} dto.Response
+// @Router /accounts/{id} [delete]
 func (h *AccountHandler) DeleteAccount(c *gin.Context) {
 	userIdStr, _ := c.Get("userId")
 	userID, err := uuid.Parse(userIdStr.(string))
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid user ID in token"})
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
 	accountIDStr := c.Param("id")
 	accountID, err := uuid.Parse(accountIDStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid account ID format"})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid account ID format"))
 		return
 	}
 
 	if err := h.accountService.DeleteAccount(userID, accountID); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "Account deleted successfully"})
+	c.JSON(http.StatusOK, dto.SuccessResponse("Account deleted successfully", nil))
 }
