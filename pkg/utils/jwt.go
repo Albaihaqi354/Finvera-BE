@@ -19,6 +19,7 @@ func GenerateJWT(userID uuid.UUID, username, secret, issuer string) (string, err
 		UserID:   userID,
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   userID.String(),
 			ExpiresAt: jwt.NewNumericDate(expirationTime),
 			Issuer:    issuer,
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
