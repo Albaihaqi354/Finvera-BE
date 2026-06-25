@@ -2,6 +2,7 @@ package handler
 
 import (
 	"finvera-be/internal/dto"
+	"finvera-be/internal/repository"
 	"finvera-be/internal/service"
 	"net/http"
 
@@ -59,6 +60,11 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 // @Security BearerAuth
 // @Param page query int false "Page number"
 // @Param limit query int false "Items per page"
+// @Param startDate query string false "Start Date"
+// @Param endDate query string false "End Date"
+// @Param type query string false "Transaction Type"
+// @Param accountId query string false "Account ID"
+// @Param search query string false "Search Term"
 // @Success 200 {object} dto.Response
 // @Failure 401 {object} dto.Response
 // @Router /transactions [get]
@@ -72,7 +78,15 @@ func (h *TransactionHandler) GetTransactions(c *gin.Context) {
 
 	page, limit := dto.GetPaginationParams(c)
 
-	transactions, total, err := h.transactionService.GetTransactions(userID, page, limit)
+	filter := repository.TransactionFilter{
+		StartDate: c.Query("startDate"),
+		EndDate:   c.Query("endDate"),
+		Type:      c.Query("type"),
+		AccountID: c.Query("accountId"),
+		Search:    c.Query("search"),
+	}
+
+	transactions, total, err := h.transactionService.GetTransactions(userID, page, limit, filter)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
 		return

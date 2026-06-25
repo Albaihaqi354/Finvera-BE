@@ -31,6 +31,7 @@ func SetupRouter(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 
 	// Services
 	authService := service.NewAuthService(userRepo)
+	userService := service.NewUserService(userRepo)
 	accountService := service.NewAccountService(accountRepo)
 	categoryService := service.NewCategoryService(categoryRepo)
 	tagService := service.NewTagService(tagRepo)
@@ -39,6 +40,7 @@ func SetupRouter(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 
 	// Handlers
 	authHandler := handler.NewAuthHandler(authService, cfg)
+	userHandler := handler.NewUserHandler(userService)
 	accountHandler := handler.NewAccountHandler(accountService)
 	categoryHandler := handler.NewCategoryHandler(categoryService)
 	tagHandler := handler.NewTagHandler(tagService)
@@ -55,10 +57,19 @@ func SetupRouter(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 			auth.POST("/logout", authHandler.Logout)
 		}
 
+		v1.GET("/preset-categories", categoryHandler.GetPresetCategories)
+
 		// Protected Routes
 		protected := v1.Group("")
 		protected.Use(middleware.AuthMiddleware(cfg.JWTSecret))
 		{
+			// Users
+			users := protected.Group("/users")
+			{
+				users.GET("/me", userHandler.GetProfile)
+				users.PUT("/me", userHandler.UpdateProfile)
+			}
+
 			// Accounts
 			accounts := protected.Group("/accounts")
 			{

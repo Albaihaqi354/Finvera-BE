@@ -6,6 +6,12 @@ import (
 	"github.com/google/uuid"
 )
 
+type UserResponse struct {
+	ID       uuid.UUID `json:"id"`
+	Username string    `json:"username"`
+	Email    string    `json:"email"`
+}
+
 type AccountResponse struct {
 	ID             uuid.UUID `json:"id"`
 	Name           string    `json:"name"`
@@ -19,14 +25,21 @@ type AccountResponse struct {
 }
 
 type CategoryResponse struct {
-	ID        uuid.UUID `json:"id"`
-	Name      string    `json:"name"`
-	Type      string    `json:"type"`
-	Icon      string    `json:"icon"`
-	Color     string    `json:"color"`
-	SortOrder int       `json:"sortOrder"`
-	Note      string    `json:"note"`
-	IsSystem  bool      `json:"isSystem"`
+	ID         uuid.UUID  `json:"id"`
+	ParentID   *uuid.UUID `json:"parentId,omitempty"`
+	Name       string     `json:"name"`
+	Type       string     `json:"type"`
+	Icon       string     `json:"icon"`
+	Color      string     `json:"color"`
+	ColorClass string     `json:"colorClass"`
+	SortOrder  int        `json:"sortOrder"`
+	Note       string     `json:"note"`
+	IsSystem   bool       `json:"isSystem"`
+}
+
+type PresetCategoryGroupResponse struct {
+	CategoryResponse
+	Children []CategoryResponse `json:"children"`
 }
 
 type TagResponse struct {

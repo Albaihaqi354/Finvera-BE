@@ -18,6 +18,11 @@ type LoginRequest struct {
 	Password string `json:"password" binding:"required" example:"secret123"`
 }
 
+type UpdateUserRequest struct {
+	Username string `json:"username" binding:"required,min=3"`
+	Email    string `json:"email" binding:"required,email"`
+}
+
 // Account
 type CreateAccountRequest struct {
 	Name           string  `json:"name" binding:"required"`

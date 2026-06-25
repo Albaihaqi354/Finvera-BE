@@ -2,8 +2,11 @@ package main
 
 import (
 	"finvera-be/internal/config"
+	"finvera-be/internal/cron"
 	"finvera-be/internal/database"
+	"finvera-be/internal/repository"
 	"finvera-be/internal/router"
+	"finvera-be/internal/service"
 	"log"
 
 	_ "finvera-be/docs" // swagger docs - wajib di-import
@@ -57,7 +60,20 @@ func main() {
 	// 4. Setup API Routes + Swagger
 	router.SetupRouter(r, database.DB, cfg)
 
-	// 5. Start Server
+	// 5. Setup and Start Cron Service
+	// We need to initialize repos and services for Cron, just like in router, 
+	// or we can reuse them if we extract them from router. For now, create instances:
+	txRepo := repository.NewTransactionRepository(database.DB)
+	accRepo := repository.NewAccountRepository(database.DB)
+	catRepo := repository.NewCategoryRepository(database.DB)
+	tagRepo := repository.NewTagRepository(database.DB)
+	txService := service.NewTransactionService(txRepo, accRepo, catRepo, tagRepo)
+	
+	cronService := cron.NewCronService(database.DB, txService)
+	cronService.Start()
+	defer cronService.Stop()
+
+	// 6. Start Server
 	log.Printf("Server running on port %s", cfg.Port)
 	log.Printf("Swagger UI: http://localhost:%s/swagger/index.html", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {

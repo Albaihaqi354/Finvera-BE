@@ -194,3 +194,19 @@ func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 
 	c.JSON(http.StatusOK, dto.SuccessResponse("Category deleted successfully", nil))
 }
+
+// @Summary Get preset categories
+// @Description Get all system preset categories (grouped with children)
+// @Tags Categories
+// @Produce json
+// @Success 200 {object} dto.Response
+// @Router /preset-categories [get]
+func (h *CategoryHandler) GetPresetCategories(c *gin.Context) {
+	categories, err := h.categoryService.GetPresetCategories()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		return
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse("Preset categories retrieved successfully", categories))
+}

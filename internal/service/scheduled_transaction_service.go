@@ -73,7 +73,7 @@ func (s *scheduledTransactionService) CreateScheduled(userID uuid.UUID, req dto.
 	if err != nil {
 		return nil, errors.New("invalid categoryId")
 	}
-	if category.UserID != uuid.Nil && category.UserID != userID {
+	if category.UserID != nil && *category.UserID != userID {
 		return nil, errors.New("unauthorized categoryId")
 	}
 
@@ -153,7 +153,7 @@ func (s *scheduledTransactionService) UpdateScheduled(userID, scheduledID uuid.U
 	if err != nil {
 		return nil, errors.New("invalid categoryId")
 	}
-	if category.UserID != uuid.Nil && category.UserID != userID {
+	if category.UserID != nil && *category.UserID != userID {
 		return nil, errors.New("unauthorized categoryId")
 	}
 

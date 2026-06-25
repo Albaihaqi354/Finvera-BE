@@ -12,7 +12,7 @@ import (
 
 type TransactionService interface {
 	CreateTransaction(userID uuid.UUID, req dto.CreateTransactionRequest) (*dto.TransactionResponse, error)
-	GetTransactions(userID uuid.UUID, page, limit int) ([]dto.TransactionResponse, int64, error)
+	GetTransactions(userID uuid.UUID, page, limit int, filter repository.TransactionFilter) ([]dto.TransactionResponse, int64, error)
 	GetTransactionByID(userID, transactionID uuid.UUID) (*dto.TransactionResponse, error)
 	UpdateTransaction(userID, transactionID uuid.UUID, req dto.UpdateTransactionRequest) (*dto.TransactionResponse, error)
 	DeleteTransaction(userID, transactionID uuid.UUID) error
@@ -81,7 +81,7 @@ func (s *transactionService) CreateTransaction(userID uuid.UUID, req dto.CreateT
 		return nil, errors.New("invalid categoryId")
 	}
 	// Category belongs to user or is a global category
-	if category.UserID != uuid.Nil && category.UserID != userID {
+	if category.UserID != nil && *category.UserID != userID {
 		return nil, errors.New("unauthorized categoryId")
 	}
 
@@ -167,8 +167,8 @@ func (s *transactionService) CreateTransaction(userID uuid.UUID, req dto.CreateT
 	return mapTransactionToResponse(reloaded), nil
 }
 
-func (s *transactionService) GetTransactions(userID uuid.UUID, page, limit int) ([]dto.TransactionResponse, int64, error) {
-	transactions, total, err := s.repo.GetByUserID(userID, page, limit)
+func (s *transactionService) GetTransactions(userID uuid.UUID, page, limit int, filter repository.TransactionFilter) ([]dto.TransactionResponse, int64, error) {
+	transactions, total, err := s.repo.GetByUserID(userID, page, limit, filter)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -264,7 +264,7 @@ func (s *transactionService) UpdateTransaction(userID, transactionID uuid.UUID, 
 		if err != nil {
 			return errors.New("invalid categoryId")
 		}
-		if category.UserID != uuid.Nil && category.UserID != userID {
+		if category.UserID != nil && *category.UserID != userID {
 			return errors.New("unauthorized categoryId")
 		}
 

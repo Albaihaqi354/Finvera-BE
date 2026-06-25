@@ -7,10 +7,18 @@ import (
 	"gorm.io/gorm"
 )
 
+type TransactionFilter struct {
+	StartDate string
+	EndDate   string
+	Type      string
+	AccountID string
+	Search    string
+}
+
 type TransactionRepository interface {
 	CreateWithTx(tx *gorm.DB, transaction *models.Transaction) error
 	DeleteWithTx(tx *gorm.DB, id uuid.UUID) error
-	GetByUserID(userID uuid.UUID, page, limit int) ([]models.Transaction, int64, error)
+	GetByUserID(userID uuid.UUID, page, limit int, filter TransactionFilter) ([]models.Transaction, int64, error)
 	GetByID(id uuid.UUID) (*models.Transaction, error)
 	GetDB() *gorm.DB
 }
@@ -35,11 +43,28 @@ func (r *transactionRepository) DeleteWithTx(tx *gorm.DB, id uuid.UUID) error {
 	return tx.Delete(&models.Transaction{}, "id = ?", id).Error
 }
 
-func (r *transactionRepository) GetByUserID(userID uuid.UUID, page, limit int) ([]models.Transaction, int64, error) {
+func (r *transactionRepository) GetByUserID(userID uuid.UUID, page, limit int, filter TransactionFilter) ([]models.Transaction, int64, error) {
 	var transactions []models.Transaction
 	var total int64
 
 	query := r.db.Where("user_id = ?", userID)
+
+	if filter.StartDate != "" {
+		query = query.Where("date >= ?", filter.StartDate)
+	}
+	if filter.EndDate != "" {
+		query = query.Where("date <= ?", filter.EndDate)
+	}
+	if filter.Type != "" && filter.Type != "All Types" {
+		query = query.Where("type = ?", filter.Type)
+	}
+	if filter.AccountID != "" && filter.AccountID != "All Accounts" {
+		query = query.Where("account_id = ? OR target_account_id = ?", filter.AccountID, filter.AccountID)
+	}
+	if filter.Search != "" {
+		// Search in note. Later can join category and account.
+		query = query.Where("note ILIKE ?", "%"+filter.Search+"%")
+	}
 
 	err := query.Model(&models.Transaction{}).Count(&total).Error
 	if err != nil {

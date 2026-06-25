@@ -12,6 +12,7 @@ import (
 type CategoryService interface {
 	CreateCategory(userID uuid.UUID, req dto.CreateCategoryRequest) (*dto.CategoryResponse, error)
 	GetCategories(userID uuid.UUID, page, limit int) ([]dto.CategoryResponse, int64, error)
+	GetPresetCategories() ([]dto.PresetCategoryGroupResponse, error)
 	GetCategoryByID(userID, categoryID uuid.UUID) (*dto.CategoryResponse, error)
 	UpdateCategory(userID, categoryID uuid.UUID, req dto.UpdateCategoryRequest) (*dto.CategoryResponse, error)
 	DeleteCategory(userID, categoryID uuid.UUID) error
@@ -31,24 +32,26 @@ func mapCategoryToResponse(category *models.Category) *dto.CategoryResponse {
 		return nil
 	}
 	return &dto.CategoryResponse{
-		ID:        category.ID,
-		Name:      category.Name,
-		Type:      category.Type,
-		Icon:      category.Icon,
-		Color:     category.Color,
-		SortOrder: category.SortOrder,
-		Note:      category.Note,
-		IsSystem:  category.UserID == uuid.Nil,
+		ID:         category.ID,
+		ParentID:   category.ParentID,
+		Name:       category.Name,
+		Type:       category.Type,
+		Icon:       category.Icon,
+		Color:      category.Color,
+		ColorClass: category.ColorClass,
+		SortOrder:  category.SortOrder,
+		Note:       category.Note,
+		IsSystem:   category.UserID == nil,
 	}
 }
 
 func (s *categoryService) CreateCategory(userID uuid.UUID, req dto.CreateCategoryRequest) (*dto.CategoryResponse, error) {
 	category := &models.Category{
-		UserID:    userID,
+		UserID:    &userID,
 		Name:      req.Name,
 		Type:      req.Type,
 		Icon:      req.Icon,
-		Color:     req.Color,
+		Color:      req.Color,
 		SortOrder: req.SortOrder,
 		Note:      req.Note,
 	}
@@ -74,6 +77,44 @@ func (s *categoryService) GetCategories(userID uuid.UUID, page, limit int) ([]dt
 	return responses, total, nil
 }
 
+func (s *categoryService) GetPresetCategories() ([]dto.PresetCategoryGroupResponse, error) {
+	categories, err := s.repo.GetPresetCategories()
+	if err != nil {
+		return nil, err
+	}
+
+	parentMap := make(map[uuid.UUID]*dto.PresetCategoryGroupResponse)
+	var order []*dto.PresetCategoryGroupResponse
+
+	// First pass: create parents
+	for i := range categories {
+		if categories[i].ParentID == nil {
+			resp := &dto.PresetCategoryGroupResponse{
+				CategoryResponse: *mapCategoryToResponse(&categories[i]),
+				Children:         []dto.CategoryResponse{},
+			}
+			parentMap[categories[i].ID] = resp
+			order = append(order, resp)
+		}
+	}
+
+	// Second pass: add children
+	for i := range categories {
+		if categories[i].ParentID != nil {
+			if parent, exists := parentMap[*categories[i].ParentID]; exists {
+				parent.Children = append(parent.Children, *mapCategoryToResponse(&categories[i]))
+			}
+		}
+	}
+
+	var result []dto.PresetCategoryGroupResponse
+	for _, p := range order {
+		result = append(result, *p)
+	}
+
+	return result, nil
+}
+
 func (s *categoryService) GetCategoryByID(userID, categoryID uuid.UUID) (*dto.CategoryResponse, error) {
 	category, err := s.repo.GetByID(categoryID)
 	if err != nil {
@@ -81,7 +122,7 @@ func (s *categoryService) GetCategoryByID(userID, categoryID uuid.UUID) (*dto.Ca
 	}
 
 	// Ensure the user owns this category or it's a global category
-	if category.UserID != uuid.Nil && category.UserID != userID {
+	if category.UserID != nil && *category.UserID != userID {
 		return nil, errors.New("unauthorized: you do not have permission to access this category")
 	}
 
@@ -95,12 +136,12 @@ func (s *categoryService) UpdateCategory(userID, categoryID uuid.UUID, req dto.U
 	}
 
 	// Check if this is a default system category
-	if category.UserID == uuid.Nil {
+	if category.UserID == nil {
 		return nil, errors.New("forbidden: cannot modify default system category")
 	}
 
 	// Check ownership
-	if category.UserID != userID {
+	if *category.UserID != userID {
 		return nil, errors.New("unauthorized: you do not own this category")
 	}
 
@@ -125,12 +166,12 @@ func (s *categoryService) DeleteCategory(userID, categoryID uuid.UUID) error {
 	}
 
 	// Check if this is a default system category
-	if category.UserID == uuid.Nil {
+	if category.UserID == nil {
 		return errors.New("forbidden: cannot delete default system category")
 	}
 
 	// Check ownership
-	if category.UserID != userID {
+	if *category.UserID != userID {
 		return errors.New("unauthorized: you do not own this category")
 	}
 

@@ -128,32 +128,149 @@ CREATE TABLE IF NOT EXISTS scheduled_transactions (
 -- DML (Data Manipulation Language) - SEEDING
 -- ========================================================================================
 
--- Karena data kategori ini "default system", kita insert dengan user_id = NULL
--- (sehingga berlaku global/default untuk semua user yang baru mendaftar)
-INSERT INTO categories (id, user_id, name, type, icon, color_class) VALUES
-    -- INCOME
-    (gen_random_uuid(), NULL, 'Occupational Earnings', 'income', '💼', 'text-[#D68E5A] bg-[#D68E5A]/10'),
-    (gen_random_uuid(), NULL, 'Finance & Investment', 'income', '📈', 'text-[#D68E5A] bg-[#D68E5A]/10'),
-    (gen_random_uuid(), NULL, 'Miscellaneous', 'income', '📝', 'text-[#D68E5A] bg-[#D68E5A]/10'),
+-- Bersihkan system categories jika script di-run ulang
+DELETE FROM categories WHERE user_id IS NULL;
+
+DO $$
+DECLARE
+    -- Income Parents
+    id_occ_earn UUID := gen_random_uuid();
+    id_fin_inv UUID := gen_random_uuid();
+    id_misc_inc UUID := gen_random_uuid();
     
-    -- EXPENSE
-    (gen_random_uuid(), NULL, 'Food & Drink', 'expense', '🍔', 'text-orange-500 bg-orange-50'),
-    (gen_random_uuid(), NULL, 'Clothing & Appearance', 'expense', '👔', 'text-purple-500 bg-purple-50'),
-    (gen_random_uuid(), NULL, 'Housing & Houseware', 'expense', '🏠', 'text-gray-600 bg-gray-100'),
-    (gen_random_uuid(), NULL, 'Transportation', 'expense', '🚗', 'text-teal-500 bg-teal-50'),
-    (gen_random_uuid(), NULL, 'Communication', 'expense', '📱', 'text-blue-500 bg-blue-50'),
-    (gen_random_uuid(), NULL, 'Entertainment', 'expense', '🎬', 'text-rose-500 bg-rose-50'),
-    (gen_random_uuid(), NULL, 'Education & Studying', 'expense', '📚', 'text-lime-500 bg-lime-50'),
-    (gen_random_uuid(), NULL, 'Gifts & Donations', 'expense', '🎁', 'text-green-500 bg-green-50'),
-    (gen_random_uuid(), NULL, 'Medical & Healthcare', 'expense', '🏥', 'text-red-500 bg-red-50'),
-    (gen_random_uuid(), NULL, 'Finance & Insurance', 'expense', '💳', 'text-amber-500 bg-amber-50'),
-    (gen_random_uuid(), NULL, 'Miscellaneous', 'expense', '📌', 'text-gray-500 bg-gray-50'),
-    
-    -- TRANSFER
-    (gen_random_uuid(), NULL, 'General Transfer', 'transfer', '🔄', 'text-orange-500 bg-orange-50'),
-    (gen_random_uuid(), NULL, 'Loan & Debt', 'transfer', '📄', 'text-amber-500 bg-amber-50'),
-    (gen_random_uuid(), NULL, 'Miscellaneous', 'transfer', '📌', 'text-gray-500 bg-gray-50')
-ON CONFLICT DO NOTHING;
+    -- Expense Parents
+    id_food UUID := gen_random_uuid();
+    id_clothing UUID := gen_random_uuid();
+    id_housing UUID := gen_random_uuid();
+    id_transport UUID := gen_random_uuid();
+    id_comm UUID := gen_random_uuid();
+    id_ent UUID := gen_random_uuid();
+    id_edu UUID := gen_random_uuid();
+    id_gifts UUID := gen_random_uuid();
+    id_med UUID := gen_random_uuid();
+    id_fin_ins UUID := gen_random_uuid();
+    id_misc_exp UUID := gen_random_uuid();
+
+    -- Transfer Parents
+    id_gen_trans UUID := gen_random_uuid();
+    id_loan UUID := gen_random_uuid();
+    id_misc_trans UUID := gen_random_uuid();
+BEGIN
+    -- ================= INCOME =================
+    INSERT INTO categories (id, user_id, name, type, icon, color_class, sort_order) VALUES
+    (id_occ_earn, NULL, 'Occupational Earnings', 'income', '💼', 'text-[#D68E5A] bg-[#D68E5A]/10', 1),
+    (id_fin_inv, NULL, 'Finance & Investment', 'income', '📈', 'text-[#D68E5A] bg-[#D68E5A]/10', 2),
+    (id_misc_inc, NULL, 'Miscellaneous', 'income', '📝', 'text-[#D68E5A] bg-[#D68E5A]/10', 3);
+
+    INSERT INTO categories (user_id, parent_id, name, type, icon, color_class, sort_order) VALUES
+    (NULL, id_occ_earn, 'Salary Income', 'income', '💼', 'text-[#D68E5A] bg-[#D68E5A]/10', 1),
+    (NULL, id_occ_earn, 'Bonus Income', 'income', '💼', 'text-[#D68E5A] bg-[#D68E5A]/10', 2),
+    (NULL, id_occ_earn, 'Overtime Pay', 'income', '💼', 'text-[#D68E5A] bg-[#D68E5A]/10', 3),
+    (NULL, id_occ_earn, 'Side Job Income', 'income', '💼', 'text-[#D68E5A] bg-[#D68E5A]/10', 4),
+    (NULL, id_occ_earn, 'Commission Income', 'income', '💼', 'text-[#D68E5A] bg-[#D68E5A]/10', 5),
+
+    (NULL, id_fin_inv, 'Interest Income', 'income', '📈', 'text-[#D68E5A] bg-[#D68E5A]/10', 1),
+    (NULL, id_fin_inv, 'Dividend Income', 'income', '📈', 'text-[#D68E5A] bg-[#D68E5A]/10', 2),
+    (NULL, id_fin_inv, 'Capital Gains', 'income', '📈', 'text-[#D68E5A] bg-[#D68E5A]/10', 3),
+    (NULL, id_fin_inv, 'Rental Income', 'income', '📈', 'text-[#D68E5A] bg-[#D68E5A]/10', 4),
+
+    (NULL, id_misc_inc, 'Gift Received', 'income', '📝', 'text-[#D68E5A] bg-[#D68E5A]/10', 1),
+    (NULL, id_misc_inc, 'Lottery/Prize', 'income', '📝', 'text-[#D68E5A] bg-[#D68E5A]/10', 2),
+    (NULL, id_misc_inc, 'Refund', 'income', '📝', 'text-[#D68E5A] bg-[#D68E5A]/10', 3),
+    (NULL, id_misc_inc, 'Other Income', 'income', '📝', 'text-[#D68E5A] bg-[#D68E5A]/10', 4);
+
+    -- ================= EXPENSE =================
+    INSERT INTO categories (id, user_id, name, type, icon, color_class, sort_order) VALUES
+    (id_food, NULL, 'Food & Drink', 'expense', '🍔', 'text-orange-500 bg-orange-50', 1),
+    (id_clothing, NULL, 'Clothing & Appearance', 'expense', '👔', 'text-purple-500 bg-purple-50', 2),
+    (id_housing, NULL, 'Housing & Houseware', 'expense', '🏠', 'text-gray-600 bg-gray-100', 3),
+    (id_transport, NULL, 'Transportation', 'expense', '🚗', 'text-teal-500 bg-teal-50', 4),
+    (id_comm, NULL, 'Communication', 'expense', '📱', 'text-blue-500 bg-blue-50', 5),
+    (id_ent, NULL, 'Entertainment', 'expense', '🎬', 'text-rose-500 bg-rose-50', 6),
+    (id_edu, NULL, 'Education & Studying', 'expense', '📚', 'text-lime-500 bg-lime-50', 7),
+    (id_gifts, NULL, 'Gifts & Donations', 'expense', '🎁', 'text-green-500 bg-green-50', 8),
+    (id_med, NULL, 'Medical & Healthcare', 'expense', '🏥', 'text-red-500 bg-red-50', 9),
+    (id_fin_ins, NULL, 'Finance & Insurance', 'expense', '💳', 'text-amber-500 bg-amber-50', 10),
+    (id_misc_exp, NULL, 'Miscellaneous', 'expense', '📌', 'text-gray-500 bg-gray-50', 11);
+
+    INSERT INTO categories (user_id, parent_id, name, type, icon, color_class, sort_order) VALUES
+    (NULL, id_food, 'Restaurant/Dining', 'expense', '🍔', 'text-orange-500 bg-orange-50', 1),
+    (NULL, id_food, 'Groceries', 'expense', '🍔', 'text-orange-500 bg-orange-50', 2),
+    (NULL, id_food, 'Coffee/Tea', 'expense', '🍔', 'text-orange-500 bg-orange-50', 3),
+    (NULL, id_food, 'Beverages', 'expense', '🍔', 'text-orange-500 bg-orange-50', 4),
+    (NULL, id_food, 'Snacks', 'expense', '🍔', 'text-orange-500 bg-orange-50', 5),
+
+    (NULL, id_clothing, 'Clothing', 'expense', '👔', 'text-purple-500 bg-purple-50', 1),
+    (NULL, id_clothing, 'Shoes', 'expense', '👔', 'text-purple-500 bg-purple-50', 2),
+    (NULL, id_clothing, 'Accessories', 'expense', '👔', 'text-purple-500 bg-purple-50', 3),
+    (NULL, id_clothing, 'Laundry', 'expense', '👔', 'text-purple-500 bg-purple-50', 4),
+    (NULL, id_clothing, 'Cosmetics', 'expense', '👔', 'text-purple-500 bg-purple-50', 5),
+
+    (NULL, id_housing, 'Rent', 'expense', '🏠', 'text-gray-600 bg-gray-100', 1),
+    (NULL, id_housing, 'Mortgage', 'expense', '🏠', 'text-gray-600 bg-gray-100', 2),
+    (NULL, id_housing, 'Utilities', 'expense', '🏠', 'text-gray-600 bg-gray-100', 3),
+    (NULL, id_housing, 'Furniture', 'expense', '🏠', 'text-gray-600 bg-gray-100', 4),
+    (NULL, id_housing, 'Home Appliances', 'expense', '🏠', 'text-gray-600 bg-gray-100', 5),
+    (NULL, id_housing, 'Repairs', 'expense', '🏠', 'text-gray-600 bg-gray-100', 6),
+
+    (NULL, id_transport, 'Fuel', 'expense', '🚗', 'text-teal-500 bg-teal-50', 1),
+    (NULL, id_transport, 'Public Transit', 'expense', '🚗', 'text-teal-500 bg-teal-50', 2),
+    (NULL, id_transport, 'Taxi/Ride-hailing', 'expense', '🚗', 'text-teal-500 bg-teal-50', 3),
+    (NULL, id_transport, 'Vehicle Maintenance', 'expense', '🚗', 'text-teal-500 bg-teal-50', 4),
+    (NULL, id_transport, 'Parking/Toll', 'expense', '🚗', 'text-teal-500 bg-teal-50', 5),
+
+    (NULL, id_comm, 'Mobile Plan', 'expense', '📱', 'text-blue-500 bg-blue-50', 1),
+    (NULL, id_comm, 'Internet', 'expense', '📱', 'text-blue-500 bg-blue-50', 2),
+    (NULL, id_comm, 'Cable TV', 'expense', '📱', 'text-blue-500 bg-blue-50', 3),
+    (NULL, id_comm, 'Postage', 'expense', '📱', 'text-blue-500 bg-blue-50', 4),
+
+    (NULL, id_ent, 'Movies/Theater', 'expense', '🎬', 'text-rose-500 bg-rose-50', 1),
+    (NULL, id_ent, 'Music', 'expense', '🎬', 'text-rose-500 bg-rose-50', 2),
+    (NULL, id_ent, 'Games', 'expense', '🎬', 'text-rose-500 bg-rose-50', 3),
+    (NULL, id_ent, 'Sports', 'expense', '🎬', 'text-rose-500 bg-rose-50', 4),
+    (NULL, id_ent, 'Travel/Vacation', 'expense', '🎬', 'text-rose-500 bg-rose-50', 5),
+    (NULL, id_ent, 'Hobbies', 'expense', '🎬', 'text-rose-500 bg-rose-50', 6),
+
+    (NULL, id_edu, 'Tuition', 'expense', '📚', 'text-lime-500 bg-lime-50', 1),
+    (NULL, id_edu, 'Books', 'expense', '📚', 'text-lime-500 bg-lime-50', 2),
+    (NULL, id_edu, 'Online Courses', 'expense', '📚', 'text-lime-500 bg-lime-50', 3),
+    (NULL, id_edu, 'Stationery', 'expense', '📚', 'text-lime-500 bg-lime-50', 4),
+
+    (NULL, id_gifts, 'Gifts', 'expense', '🎁', 'text-green-500 bg-green-50', 1),
+    (NULL, id_gifts, 'Charity', 'expense', '🎁', 'text-green-500 bg-green-50', 2),
+    (NULL, id_gifts, 'Church/Religious', 'expense', '🎁', 'text-green-500 bg-green-50', 3),
+
+    (NULL, id_med, 'Doctor Visit', 'expense', '🏥', 'text-red-500 bg-red-50', 1),
+    (NULL, id_med, 'Medicine', 'expense', '🏥', 'text-red-500 bg-red-50', 2),
+    (NULL, id_med, 'Dental', 'expense', '🏥', 'text-red-500 bg-red-50', 3),
+    (NULL, id_med, 'Vision', 'expense', '🏥', 'text-red-500 bg-red-50', 4),
+    (NULL, id_med, 'Insurance Premium', 'expense', '🏥', 'text-red-500 bg-red-50', 5),
+
+    (NULL, id_fin_ins, 'Bank Fees', 'expense', '💳', 'text-amber-500 bg-amber-50', 1),
+    (NULL, id_fin_ins, 'Interest Payment', 'expense', '💳', 'text-amber-500 bg-amber-50', 2),
+    (NULL, id_fin_ins, 'Investment Fees', 'expense', '💳', 'text-amber-500 bg-amber-50', 3),
+    (NULL, id_fin_ins, 'Life Insurance', 'expense', '💳', 'text-amber-500 bg-amber-50', 4),
+
+    (NULL, id_misc_exp, 'Other Expenses', 'expense', '📌', 'text-gray-500 bg-gray-50', 1);
+
+    -- ================= TRANSFER =================
+    INSERT INTO categories (id, user_id, name, type, icon, color_class, sort_order) VALUES
+    (id_gen_trans, NULL, 'General Transfer', 'transfer', '🔄', 'text-orange-500 bg-orange-50', 1),
+    (id_loan, NULL, 'Loan & Debt', 'transfer', '📄', 'text-amber-500 bg-amber-50', 2),
+    (id_misc_trans, NULL, 'Miscellaneous', 'transfer', '📌', 'text-gray-500 bg-gray-50', 3);
+
+    INSERT INTO categories (user_id, parent_id, name, type, icon, color_class, sort_order) VALUES
+    (NULL, id_gen_trans, 'Bank Transfer', 'transfer', '🔄', 'text-orange-500 bg-orange-50', 1),
+    (NULL, id_gen_trans, 'Savings Deposit', 'transfer', '🔄', 'text-orange-500 bg-orange-50', 2),
+    (NULL, id_gen_trans, 'Savings Withdrawal', 'transfer', '🔄', 'text-orange-500 bg-orange-50', 3),
+
+    (NULL, id_loan, 'Loan Payment', 'transfer', '📄', 'text-amber-500 bg-amber-50', 1),
+    (NULL, id_loan, 'Credit Card Payment', 'transfer', '📄', 'text-amber-500 bg-amber-50', 2),
+    (NULL, id_loan, 'Borrow Money', 'transfer', '📄', 'text-amber-500 bg-amber-50', 3),
+
+    (NULL, id_misc_trans, 'Other Transfer', 'transfer', '📌', 'text-gray-500 bg-gray-50', 1);
+
+END $$;
 
 -- Catatan:
 -- Untuk DML (Seeding) Accounts dan Tags, mereka bergantung pada user_id.

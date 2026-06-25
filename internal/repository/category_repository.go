@@ -10,6 +10,7 @@ import (
 type CategoryRepository interface {
 	Create(category *models.Category) error
 	GetAvailableForUser(userID uuid.UUID, page, limit int) ([]models.Category, int64, error)
+	GetPresetCategories() ([]models.Category, error)
 	GetByID(id uuid.UUID) (*models.Category, error)
 	Update(category *models.Category) error
 	Delete(id uuid.UUID) error
@@ -61,4 +62,10 @@ func (r *categoryRepository) Update(category *models.Category) error {
 
 func (r *categoryRepository) Delete(id uuid.UUID) error {
 	return r.db.Delete(&models.Category{}, "id = ?", id).Error
+}
+
+func (r *categoryRepository) GetPresetCategories() ([]models.Category, error) {
+	var categories []models.Category
+	err := r.db.Where("user_id IS NULL").Order("type asc, parent_id asc, sort_order asc").Find(&categories).Error
+	return categories, err
 }
