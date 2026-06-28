@@ -34,7 +34,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRY }}/${{ env.REPO_LC }}-be
+          images: ${{ env.REGISTRY }}/${{ env.REPO_LC }}
           
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
