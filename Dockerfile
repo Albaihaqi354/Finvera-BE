@@ -21,8 +21,7 @@ WORKDIR /app
 COPY --from=builder /app/main .
 # Assuming .env is used in development but we can also use env vars in docker-compose.
 # We will rely on environment variables passed by docker-compose in production,
-# but we can copy .env just in case it's required for defaults.
-COPY .env .env
+# or injected by the deployment platform.
 
 # Expose port
 EXPOSE 8080
