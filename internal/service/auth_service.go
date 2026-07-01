@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+	"strings"
 
 	"finvera-be/internal/config"
 	"finvera-be/internal/models"
@@ -23,6 +24,9 @@ func NewAuthService(userRepo repository.UserRepository) AuthService {
 }
 
 func (s *authService) Register(username, email, password string) (*models.User, error) {
+	username = strings.TrimSpace(username)
+	email = strings.ToLower(strings.TrimSpace(email))
+
 	// Check if user exists
 	existingUser, _ := s.userRepo.GetUserByUsername(username)
 	if existingUser != nil {
@@ -52,8 +56,18 @@ func (s *authService) Register(username, email, password string) (*models.User, 
 	return user, nil
 }
 
-func (s *authService) Login(username, password string, cfg *config.Config) (string, error) {
-	user, err := s.userRepo.GetUserByUsername(username)
+func (s *authService) Login(identifier, password string, cfg *config.Config) (string, error) {
+	identifier = strings.TrimSpace(identifier)
+	password = strings.TrimSpace(password)
+
+	var user *models.User
+	var err error
+
+	if strings.Contains(identifier, "@") {
+		user, err = s.userRepo.GetUserByEmail(strings.ToLower(identifier))
+	} else {
+		user, err = s.userRepo.GetUserByUsername(identifier)
+	}
 	if err != nil {
 		return "", err
 	}

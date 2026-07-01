@@ -1,0 +1,26 @@
+# VCS & IDE
+.git
+.gitignore
+.github
+.vscode
+.idea
+*.swp
+*.swo
+
+# Docs & local env (use docker-compose env instead)
+*.md
+.env
+.env.*
+!.env.example
+
+# Test / tooling artifacts
+coverage
+tmp
+temp
+*.log
+test_data.js
+
+# Docker (avoid recursive context)
+Dockerfile*
+docker-compose*.yml
+.dockerignore

@@ -31,6 +31,7 @@ func ConnectDB(cfg *config.Config) {
 		&models.TagGroup{},
 		&models.Tag{},
 		&models.Transaction{},
+		&models.ScheduledTransaction{},
 	)
 	if err != nil {
 		log.Fatal("Failed to run migrations:", err)

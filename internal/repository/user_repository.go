@@ -41,7 +41,7 @@ func (r *userRepository) GetUserByUsername(username string) (*models.User, error
 
 func (r *userRepository) GetUserByEmail(email string) (*models.User, error) {
 	var user models.User
-	err := r.db.Where("email = ?", email).First(&user).Error
+	err := r.db.Where("LOWER(email) = LOWER(?)", email).First(&user).Error
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, nil
