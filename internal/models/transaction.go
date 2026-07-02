@@ -9,7 +9,7 @@ import (
 
 type Transaction struct {
 	ID              uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	UserID          uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
+	UserID          uuid.UUID      `gorm:"type:uuid;not null;index:idx_transactions_user_deleted,composite:user" json:"userId"`
 	User            User           `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 	AccountID       uuid.UUID      `gorm:"type:uuid;not null;index" json:"accountId"`
 	Account         Account        `gorm:"foreignKey:AccountID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"-"`
@@ -28,5 +28,5 @@ type Transaction struct {
 	Tags            []Tag          `gorm:"many2many:transaction_tags;constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"tags"`
 	CreatedAt       time.Time      `json:"createdAt"`
 	UpdatedAt       time.Time      `json:"updatedAt"`
-	DeletedAt       gorm.DeletedAt `gorm:"index" json:"-"`
+	DeletedAt       gorm.DeletedAt `gorm:"index:idx_transactions_user_deleted,composite:deleted" json:"-"`
 }

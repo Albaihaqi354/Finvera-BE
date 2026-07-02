@@ -9,7 +9,7 @@ import (
 
 type Account struct {
 	ID               uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	UserID           uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
+	UserID           uuid.UUID      `gorm:"type:uuid;not null;index:idx_accounts_user_deleted,composite:user" json:"userId"`
 	User             User           `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 	ParentID         *uuid.UUID     `gorm:"type:uuid;index" json:"parentId"`
 	Parent           *Account       `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
@@ -27,5 +27,5 @@ type Account struct {
 	LastReconciledAt *time.Time     `json:"lastReconciledAt"`
 	CreatedAt        time.Time      `json:"createdAt"`
 	UpdatedAt        time.Time      `json:"updatedAt"`
-	DeletedAt        gorm.DeletedAt `gorm:"index" json:"-"`
+	DeletedAt        gorm.DeletedAt `gorm:"index:idx_accounts_user_deleted,composite:deleted" json:"-"`
 }

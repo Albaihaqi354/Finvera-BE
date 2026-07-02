@@ -18,7 +18,7 @@ type TagGroup struct {
 
 type Tag struct {
 	ID        uuid.UUID      `gorm:"type:uuid;default:gen_random_uuid();primaryKey" json:"id"`
-	UserID    uuid.UUID      `gorm:"type:uuid;not null;index" json:"userId"`
+	UserID    uuid.UUID      `gorm:"type:uuid;not null;index:idx_tags_user_deleted,composite:user" json:"userId"`
 	User      User           `gorm:"constraint:OnUpdate:CASCADE,OnDelete:CASCADE;" json:"-"`
 	GroupID   *uuid.UUID     `gorm:"type:uuid;index" json:"groupId"`
 	Group     *TagGroup      `gorm:"constraint:OnUpdate:CASCADE,OnDelete:SET NULL;" json:"-"`
@@ -27,5 +27,5 @@ type Tag struct {
 	SortOrder int            `gorm:"type:int;default:0" json:"sortOrder"`
 	CreatedAt time.Time      `json:"createdAt"`
 	UpdatedAt time.Time      `json:"updatedAt"`
-	DeletedAt gorm.DeletedAt `gorm:"index" json:"-"`
+	DeletedAt gorm.DeletedAt `gorm:"index:idx_tags_user_deleted,composite:deleted" json:"-"`
 }
