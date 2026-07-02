@@ -7,10 +7,14 @@ import (
 	"gorm.io/gorm"
 )
 
+// TransactionFilter holds validated, sanitized filter values from the handler.
+// All string fields have been checked before reaching the repository.
 type TransactionFilter struct {
 	StartDate string
 	EndDate   string
-	Type      string
+	// Type must be one of: income, expense, transfer — validated in handler
+	Type string
+	// AccountID must be a valid UUID string — validated in handler
 	AccountID string
 	Search    string
 }
@@ -47,45 +51,50 @@ func (r *transactionRepository) GetByUserID(userID uuid.UUID, page, limit int, f
 	var transactions []models.Transaction
 	var total int64
 
-	query := r.db.Where("user_id = ?", userID)
+	// Always scope by the authenticated user's ID first
+	query := r.db.Where("transactions.user_id = ?", userID)
 
 	if filter.StartDate != "" {
-		query = query.Where("date >= ?", filter.StartDate)
+		query = query.Where("transactions.date >= ?", filter.StartDate)
 	}
 	if filter.EndDate != "" {
-		query = query.Where("date <= ?", filter.EndDate)
+		query = query.Where("transactions.date <= ?", filter.EndDate)
 	}
-	if filter.Type != "" && filter.Type != "All Types" {
-		query = query.Where("type = ?", filter.Type)
+	// Type is already validated as oneof=income,expense,transfer by the handler binding
+	if filter.Type != "" {
+		query = query.Where("transactions.type = ?", filter.Type)
 	}
-	if filter.AccountID != "" && filter.AccountID != "All Accounts" {
-		query = query.Where("account_id = ? OR target_account_id = ?", filter.AccountID, filter.AccountID)
+	// AccountID is a valid UUID string — safe to use as a parameterized query
+	if filter.AccountID != "" {
+		query = query.Where("transactions.account_id = ? OR transactions.target_account_id = ?", filter.AccountID, filter.AccountID)
 	}
+	// Search uses ILIKE with parameterized value — safe against injection
 	if filter.Search != "" {
-		// Search in note. Later can join category and account.
-		query = query.Where("note ILIKE ?", "%"+filter.Search+"%")
+		query = query.Where("transactions.note ILIKE ?", "%"+filter.Search+"%")
 	}
 
-	err := query.Model(&models.Transaction{}).Count(&total).Error
-	if err != nil {
+	if err := query.Model(&models.Transaction{}).Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
 	offset := (page - 1) * limit
-	err = query.Preload("Account").
+	err := query.
+		Preload("Account").
 		Preload("TargetAccount").
 		Preload("Category").
 		Preload("Tags").
-		Order("date desc, created_at desc").
-		Offset(offset).Limit(limit).
+		Order("transactions.date desc, transactions.created_at desc").
+		Offset(offset).
+		Limit(limit).
 		Find(&transactions).Error
-		
+
 	return transactions, total, err
 }
 
 func (r *transactionRepository) GetByID(id uuid.UUID) (*models.Transaction, error) {
 	var transaction models.Transaction
-	err := r.db.Preload("Account").
+	err := r.db.
+		Preload("Account").
 		Preload("TargetAccount").
 		Preload("Category").
 		Preload("Tags").

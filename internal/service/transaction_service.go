@@ -2,6 +2,7 @@ package service
 
 import (
 	"errors"
+
 	"finvera-be/internal/dto"
 	"finvera-be/internal/models"
 	"finvera-be/internal/repository"
@@ -11,10 +12,10 @@ import (
 )
 
 type TransactionService interface {
-	CreateTransaction(userID uuid.UUID, req dto.CreateTransactionRequest) (*dto.TransactionResponse, error)
+	CreateTransaction(userID uuid.UUID, req dto.TransactionRequest) (*dto.TransactionResponse, error)
 	GetTransactions(userID uuid.UUID, page, limit int, filter repository.TransactionFilter) ([]dto.TransactionResponse, int64, error)
 	GetTransactionByID(userID, transactionID uuid.UUID) (*dto.TransactionResponse, error)
-	UpdateTransaction(userID, transactionID uuid.UUID, req dto.UpdateTransactionRequest) (*dto.TransactionResponse, error)
+	UpdateTransaction(userID, transactionID uuid.UUID, req dto.TransactionRequest) (*dto.TransactionResponse, error)
 	DeleteTransaction(userID, transactionID uuid.UUID) error
 }
 
@@ -39,77 +40,133 @@ func NewTransactionService(
 	}
 }
 
-// Mapper
-func mapTransactionToResponse(transaction *models.Transaction) *dto.TransactionResponse {
-	if transaction == nil {
+// ── Mapper helpers ────────────────────────────────────────────────────────────
+
+func mapTransactionToResponse(t *models.Transaction) *dto.TransactionResponse {
+	if t == nil {
 		return nil
 	}
-
 	var targetAcc *dto.AccountResponse
-	if transaction.TargetAccount != nil {
-		targetAcc = mapAccountToResponse(transaction.TargetAccount)
+	if t.TargetAccount != nil {
+		targetAcc = mapAccountToResponse(t.TargetAccount)
 	}
-
-	var tagResponses []dto.TagResponse
-	for _, tag := range transaction.Tags {
-		tagResponses = append(tagResponses, *mapTagToResponse(&tag))
+	var tags []dto.TagResponse
+	for _, tag := range t.Tags {
+		tags = append(tags, *mapTagToResponse(&tag))
 	}
-
 	return &dto.TransactionResponse{
-		ID:            transaction.ID,
-		Type:          transaction.Type,
-		Amount:        transaction.Amount,
-		Account:       *mapAccountToResponse(&transaction.Account),
+		ID:            t.ID,
+		Type:          t.Type,
+		Amount:        t.Amount,
+		Account:       *mapAccountToResponse(&t.Account),
 		TargetAccount: targetAcc,
-		Category:      *mapCategoryToResponse(&transaction.Category),
-		Date:          transaction.Date,
-		Note:          transaction.Note,
-		Tags:          tagResponses,
-		CreatedAt:     transaction.CreatedAt,
+		Category:      *mapCategoryToResponse(&t.Category),
+		Date:          t.Date,
+		Note:          t.Note,
+		Tags:          tags,
+		CreatedAt:     t.CreatedAt,
 	}
 }
 
-func (s *transactionService) CreateTransaction(userID uuid.UUID, req dto.CreateTransactionRequest) (*dto.TransactionResponse, error) {
-	// Validations
-	account, err := s.accountRepo.GetByID(req.AccountID)
+// ── Validation helpers ────────────────────────────────────────────────────────
+
+func (s *transactionService) validateTransactionRequest(
+	userID uuid.UUID,
+	req dto.TransactionRequest,
+) (account *models.Account, targetAccount *models.Account, tags []models.Tag, err error) {
+	// Validate account ownership
+	account, err = s.accountRepo.GetByID(req.AccountID)
 	if err != nil || account.UserID != userID {
-		return nil, errors.New("invalid or unauthorized accountId")
+		return nil, nil, nil, errors.New("invalid or unauthorized accountId")
 	}
 
+	// Validate category
 	category, err := s.categoryRepo.GetByID(req.CategoryID)
 	if err != nil {
-		return nil, errors.New("invalid categoryId")
+		return nil, nil, nil, errors.New("invalid categoryId")
 	}
-	// Category belongs to user or is a global category
 	if category.UserID != nil && *category.UserID != userID {
-		return nil, errors.New("unauthorized categoryId")
+		return nil, nil, nil, errors.New("unauthorized categoryId")
 	}
 
-	var targetAccount *models.Account
+	// Transfer-specific validation
 	if req.Type == "transfer" {
 		if req.TargetAccountID == nil {
-			return nil, errors.New("targetAccountId is required for transfer transactions")
+			return nil, nil, nil, errors.New("targetAccountId is required for transfer transactions")
 		}
 		if *req.TargetAccountID == req.AccountID {
-			return nil, errors.New("target account must be different from source account")
+			return nil, nil, nil, errors.New("target account must be different from source account")
 		}
 		targetAccount, err = s.accountRepo.GetByID(*req.TargetAccountID)
 		if err != nil || targetAccount.UserID != userID {
-			return nil, errors.New("invalid or unauthorized targetAccountId")
+			return nil, nil, nil, errors.New("invalid or unauthorized targetAccountId")
 		}
-	} else {
-		if req.TargetAccountID != nil {
-			return nil, errors.New("targetAccountId should only be provided for transfer transactions")
-		}
+	} else if req.TargetAccountID != nil {
+		return nil, nil, nil, errors.New("targetAccountId should only be provided for transfer transactions")
 	}
 
-	var tags []models.Tag
+	// Validate tags ownership
 	for _, tagID := range req.TagIDs {
 		tag, err := s.tagRepo.GetByID(tagID)
 		if err != nil || tag.UserID != userID {
-			return nil, errors.New("invalid or unauthorized tagId")
+			return nil, nil, nil, errors.New("invalid or unauthorized tagId")
 		}
 		tags = append(tags, *tag)
+	}
+
+	return account, targetAccount, tags, nil
+}
+
+// ── Balance helpers ───────────────────────────────────────────────────────────
+
+func applyBalance(tx *gorm.DB, txType string, amount float64, account, targetAccount *models.Account) error {
+	switch txType {
+	case "income":
+		account.Balance += amount
+		return tx.Save(account).Error
+	case "expense":
+		account.Balance -= amount
+		return tx.Save(account).Error
+	case "transfer":
+		account.Balance -= amount
+		targetAccount.Balance += amount
+		if err := tx.Save(account).Error; err != nil {
+			return err
+		}
+		return tx.Save(targetAccount).Error
+	}
+	return nil
+}
+
+func (s *transactionService) revertBalance(tx *gorm.DB, transaction *models.Transaction) error {
+	account := transaction.Account
+	switch transaction.Type {
+	case "income":
+		account.Balance -= transaction.Amount
+		return tx.Save(&account).Error
+	case "expense":
+		account.Balance += transaction.Amount
+		return tx.Save(&account).Error
+	case "transfer":
+		account.Balance += transaction.Amount
+		if err := tx.Save(&account).Error; err != nil {
+			return err
+		}
+		if transaction.TargetAccount != nil {
+			ta := *transaction.TargetAccount
+			ta.Balance -= transaction.Amount
+			return tx.Save(&ta).Error
+		}
+	}
+	return nil
+}
+
+// ── Service methods ───────────────────────────────────────────────────────────
+
+func (s *transactionService) CreateTransaction(userID uuid.UUID, req dto.TransactionRequest) (*dto.TransactionResponse, error) {
+	account, targetAccount, tags, err := s.validateTransactionRequest(userID, req)
+	if err != nil {
+		return nil, err
 	}
 
 	transaction := &models.Transaction{
@@ -125,45 +182,19 @@ func (s *transactionService) CreateTransaction(userID uuid.UUID, req dto.CreateT
 	}
 
 	db := s.repo.GetDB()
-	
-	// Start DB Transaction
-	err = db.Transaction(func(tx *gorm.DB) error {
-		// 1. Save Transaction
+	if err := db.Transaction(func(tx *gorm.DB) error {
 		if err := s.repo.CreateWithTx(tx, transaction); err != nil {
 			return err
 		}
-
-		// 2. Update Account Balance
-		if req.Type == "income" {
-			account.Balance += req.Amount
-			if err := tx.Save(account).Error; err != nil {
-				return err
-			}
-		} else if req.Type == "expense" {
-			account.Balance -= req.Amount
-			if err := tx.Save(account).Error; err != nil {
-				return err
-			}
-		} else if req.Type == "transfer" {
-			account.Balance -= req.Amount
-			targetAccount.Balance += req.Amount
-			if err := tx.Save(account).Error; err != nil {
-				return err
-			}
-			if err := tx.Save(targetAccount).Error; err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-
-	if err != nil {
+		return applyBalance(tx, req.Type, req.Amount, account, targetAccount)
+	}); err != nil {
 		return nil, err
 	}
 
-	// Reload to get preloaded relations properly
-	reloaded, _ := s.repo.GetByID(transaction.ID)
+	reloaded, err := s.repo.GetByID(transaction.ID)
+	if err != nil {
+		return nil, err
+	}
 	return mapTransactionToResponse(reloaded), nil
 }
 
@@ -172,12 +203,10 @@ func (s *transactionService) GetTransactions(userID uuid.UUID, page, limit int, 
 	if err != nil {
 		return nil, 0, err
 	}
-
-	var responses []dto.TransactionResponse
-	for _, t := range transactions {
-		responses = append(responses, *mapTransactionToResponse(&t))
+	responses := make([]dto.TransactionResponse, 0, len(transactions))
+	for i := range transactions {
+		responses = append(responses, *mapTransactionToResponse(&transactions[i]))
 	}
-
 	return responses, total, nil
 }
 
@@ -187,110 +216,36 @@ func (s *transactionService) GetTransactionByID(userID, transactionID uuid.UUID)
 		return nil, err
 	}
 	if transaction.UserID != userID {
-		return nil, errors.New("unauthorized: transaction does not belong to user")
+		return nil, errors.New("transaction not found")
 	}
 	return mapTransactionToResponse(transaction), nil
 }
 
-// RevertBalance is a helper function to reverse the effect of a transaction on balances
-func (s *transactionService) revertBalance(tx *gorm.DB, transaction *models.Transaction) error {
-	account := transaction.Account
-	
-	if transaction.Type == "income" {
-		account.Balance -= transaction.Amount
-		if err := tx.Save(&account).Error; err != nil {
-			return err
-		}
-	} else if transaction.Type == "expense" {
-		account.Balance += transaction.Amount
-		if err := tx.Save(&account).Error; err != nil {
-			return err
-		}
-	} else if transaction.Type == "transfer" {
-		account.Balance += transaction.Amount
-		if err := tx.Save(&account).Error; err != nil {
-			return err
-		}
-		
-		if transaction.TargetAccount != nil {
-			targetAccount := *transaction.TargetAccount
-			targetAccount.Balance -= transaction.Amount
-			if err := tx.Save(&targetAccount).Error; err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-func (s *transactionService) UpdateTransaction(userID, transactionID uuid.UUID, req dto.UpdateTransactionRequest) (*dto.TransactionResponse, error) {
-	// Updating a transaction requires reverting its old impact and applying the new impact
-	
-	// We'll delete the old one and create a new one to ensure everything runs perfectly in tx, 
-	// or we can manually update fields and balances.
-	// For full safety, let's revert the old balances, update fields, and apply new balances.
-
-	// Since GetTransactionByID returns DTO now, we have to get the raw model directly from Repo.
+func (s *transactionService) UpdateTransaction(userID, transactionID uuid.UUID, req dto.TransactionRequest) (*dto.TransactionResponse, error) {
 	transaction, err := s.repo.GetByID(transactionID)
 	if err != nil {
 		return nil, err
 	}
 	if transaction.UserID != userID {
-		return nil, errors.New("unauthorized: transaction does not belong to user")
+		return nil, errors.New("transaction not found")
 	}
 
-	// For simplicity in a robust way, let's just reuse Delete & Create logic by making a DB transaction here
-	// This ensures we don't duplicate the balance logic.
+	account, targetAccount, tags, err := s.validateTransactionRequest(userID, req)
+	if err != nil {
+		return nil, err
+	}
+
 	db := s.repo.GetDB()
-	
-	err = db.Transaction(func(tx *gorm.DB) error {
-		// 1. Revert Old Balance
+	if err := db.Transaction(func(tx *gorm.DB) error {
+		// 1. Revert old balances
 		if err := s.revertBalance(tx, transaction); err != nil {
 			return err
 		}
-
-		// 2. Clear old tags and update fields
+		// 2. Clear old many2many tags
 		if err := tx.Model(transaction).Association("Tags").Clear(); err != nil {
 			return err
 		}
-
-		// Validations for new fields
-		account, err := s.accountRepo.GetByID(req.AccountID)
-		if err != nil || account.UserID != userID {
-			return errors.New("invalid or unauthorized accountId")
-		}
-
-		category, err := s.categoryRepo.GetByID(req.CategoryID)
-		if err != nil {
-			return errors.New("invalid categoryId")
-		}
-		if category.UserID != nil && *category.UserID != userID {
-			return errors.New("unauthorized categoryId")
-		}
-
-		var targetAccount *models.Account
-		if req.Type == "transfer" {
-			if req.TargetAccountID == nil {
-				return errors.New("targetAccountId is required for transfer transactions")
-			}
-			if *req.TargetAccountID == req.AccountID {
-				return errors.New("target account must be different from source account")
-			}
-			targetAccount, err = s.accountRepo.GetByID(*req.TargetAccountID)
-			if err != nil || targetAccount.UserID != userID {
-				return errors.New("invalid or unauthorized targetAccountId")
-			}
-		}
-
-		var tags []models.Tag
-		for _, tagID := range req.TagIDs {
-			tag, err := s.tagRepo.GetByID(tagID)
-			if err != nil || tag.UserID != userID {
-				return errors.New("invalid or unauthorized tagId")
-			}
-			tags = append(tags, *tag)
-		}
-
+		// 3. Update fields
 		transaction.Type = req.Type
 		transaction.Amount = req.Amount
 		transaction.AccountID = req.AccountID
@@ -299,41 +254,19 @@ func (s *transactionService) UpdateTransaction(userID, transactionID uuid.UUID, 
 		transaction.Date = req.Date
 		transaction.Note = req.Note
 		transaction.Tags = tags
-
 		if err := tx.Save(transaction).Error; err != nil {
 			return err
 		}
-
-		// 3. Apply New Balance
-		if req.Type == "income" {
-			account.Balance += req.Amount
-			if err := tx.Save(account).Error; err != nil {
-				return err
-			}
-		} else if req.Type == "expense" {
-			account.Balance -= req.Amount
-			if err := tx.Save(account).Error; err != nil {
-				return err
-			}
-		} else if req.Type == "transfer" {
-			account.Balance -= req.Amount
-			targetAccount.Balance += req.Amount
-			if err := tx.Save(account).Error; err != nil {
-				return err
-			}
-			if err := tx.Save(targetAccount).Error; err != nil {
-				return err
-			}
-		}
-
-		return nil
-	})
-
-	if err != nil {
+		// 4. Apply new balances
+		return applyBalance(tx, req.Type, req.Amount, account, targetAccount)
+	}); err != nil {
 		return nil, err
 	}
 
-	reloaded, _ := s.repo.GetByID(transactionID)
+	reloaded, err := s.repo.GetByID(transactionID)
+	if err != nil {
+		return nil, err
+	}
 	return mapTransactionToResponse(reloaded), nil
 }
 
@@ -343,22 +276,17 @@ func (s *transactionService) DeleteTransaction(userID, transactionID uuid.UUID) 
 		return err
 	}
 	if transaction.UserID != userID {
-		return errors.New("unauthorized: transaction does not belong to user")
+		return errors.New("transaction not found")
 	}
 
 	db := s.repo.GetDB()
 	return db.Transaction(func(tx *gorm.DB) error {
-		// 1. Revert balance
 		if err := s.revertBalance(tx, transaction); err != nil {
 			return err
 		}
-
-		// 2. Delete the transaction (along with association if soft delete handles it, GORM will delete relations)
-		// Clear Many-to-Many associations first to be safe
 		if err := tx.Model(transaction).Association("Tags").Clear(); err != nil {
 			return err
 		}
-
 		return s.repo.DeleteWithTx(tx, transactionID)
 	})
 }

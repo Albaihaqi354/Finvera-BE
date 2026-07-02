@@ -1,14 +1,22 @@
 package handler
 
 import (
+	"net/http"
+
 	"finvera-be/internal/dto"
 	"finvera-be/internal/repository"
 	"finvera-be/internal/service"
-	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 )
+
+// allowedTransactionTypes is the whitelist for the type query filter.
+var allowedTransactionTypes = map[string]bool{
+	"income":   true,
+	"expense":  true,
+	"transfer": true,
+}
 
 type TransactionHandler struct {
 	transactionService service.TransactionService
@@ -18,8 +26,20 @@ func NewTransactionHandler(transactionService service.TransactionService) *Trans
 	return &TransactionHandler{transactionService: transactionService}
 }
 
+// getUserID extracts and parses the userId set by AuthMiddleware.
+func getUserID(c *gin.Context) (uuid.UUID, bool) {
+	v, exists := c.Get("userId")
+	if !exists {
+		return uuid.Nil, false
+	}
+	id, err := uuid.Parse(v.(string))
+	if err != nil {
+		return uuid.Nil, false
+	}
+	return id, true
+}
+
 // @Summary Create a new transaction
-// @Description Create a new transaction and update account balances accordingly
 // @Tags Transactions
 // @Accept json
 // @Produce json
@@ -31,10 +51,9 @@ func NewTransactionHandler(transactionService service.TransactionService) *Trans
 // @Failure 500 {object} dto.Response
 // @Router /transactions [post]
 func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid or missing user ID in token"))
 		return
 	}
 
@@ -54,35 +73,49 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 }
 
 // @Summary Get all transactions
-// @Description Get all transactions for the authenticated user
 // @Tags Transactions
 // @Produce json
 // @Security BearerAuth
-// @Param page query int false "Page number"
-// @Param limit query int false "Items per page"
-// @Param startDate query string false "Start Date"
-// @Param endDate query string false "End Date"
-// @Param type query string false "Transaction Type"
-// @Param accountId query string false "Account ID"
-// @Param search query string false "Search Term"
+// @Param page     query int    false "Page number (default: 1)"
+// @Param limit    query int    false "Items per page (default: 10, max: 100)"
+// @Param startDate query string false "Start date (RFC3339)"
+// @Param endDate   query string false "End date (RFC3339)"
+// @Param type      query string false "Transaction type: income|expense|transfer"
+// @Param accountId query string false "Account UUID"
+// @Param search    query string false "Search by note"
 // @Success 200 {object} dto.Response
 // @Failure 401 {object} dto.Response
 // @Router /transactions [get]
 func (h *TransactionHandler) GetTransactions(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid or missing user ID in token"))
 		return
 	}
 
 	page, limit := dto.GetPaginationParams(c)
 
+	// Validate & sanitize type filter — whitelist only
+	typeFilter := c.Query("type")
+	if typeFilter != "" && !allowedTransactionTypes[typeFilter] {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid type filter. Must be one of: income, expense, transfer"))
+		return
+	}
+
+	// Validate accountId is a valid UUID if provided
+	accountIDStr := c.Query("accountId")
+	if accountIDStr != "" {
+		if _, err := uuid.Parse(accountIDStr); err != nil {
+			c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid accountId format"))
+			return
+		}
+	}
+
 	filter := repository.TransactionFilter{
 		StartDate: c.Query("startDate"),
 		EndDate:   c.Query("endDate"),
-		Type:      c.Query("type"),
-		AccountID: c.Query("accountId"),
+		Type:      typeFilter,
+		AccountID: accountIDStr,
 		Search:    c.Query("search"),
 	}
 
@@ -96,26 +129,23 @@ func (h *TransactionHandler) GetTransactions(c *gin.Context) {
 }
 
 // @Summary Get transaction by ID
-// @Description Get transaction details by transaction ID
 // @Tags Transactions
 // @Produce json
 // @Security BearerAuth
-// @Param id path string true "Transaction ID"
+// @Param id path string true "Transaction UUID"
 // @Success 200 {object} dto.Response
 // @Failure 400 {object} dto.Response
 // @Failure 401 {object} dto.Response
 // @Failure 404 {object} dto.Response
 // @Router /transactions/{id} [get]
 func (h *TransactionHandler) GetTransactionByID(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid or missing user ID in token"))
 		return
 	}
 
-	transactionIDStr := c.Param("id")
-	transactionID, err := uuid.Parse(transactionIDStr)
+	transactionID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid transaction ID format"))
 		return
@@ -131,34 +161,31 @@ func (h *TransactionHandler) GetTransactionByID(c *gin.Context) {
 }
 
 // @Summary Update transaction
-// @Description Update transaction details and adjust account balances accordingly
 // @Tags Transactions
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param id path string true "Transaction ID"
-// @Param request body dto.UpdateTransactionRequest true "Update Transaction Request"
+// @Param id path string true "Transaction UUID"
+// @Param request body dto.TransactionRequest true "Update Transaction Request"
 // @Success 200 {object} dto.Response
 // @Failure 400 {object} dto.Response
 // @Failure 401 {object} dto.Response
 // @Failure 500 {object} dto.Response
 // @Router /transactions/{id} [put]
 func (h *TransactionHandler) UpdateTransaction(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid or missing user ID in token"))
 		return
 	}
 
-	transactionIDStr := c.Param("id")
-	transactionID, err := uuid.Parse(transactionIDStr)
+	transactionID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid transaction ID format"))
 		return
 	}
 
-	var req dto.UpdateTransactionRequest
+	var req dto.TransactionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error()))
 		return
@@ -174,26 +201,23 @@ func (h *TransactionHandler) UpdateTransaction(c *gin.Context) {
 }
 
 // @Summary Delete transaction
-// @Description Delete a transaction and revert its effect on account balances
 // @Tags Transactions
 // @Produce json
 // @Security BearerAuth
-// @Param id path string true "Transaction ID"
+// @Param id path string true "Transaction UUID"
 // @Success 200 {object} dto.Response
 // @Failure 400 {object} dto.Response
 // @Failure 401 {object} dto.Response
 // @Failure 500 {object} dto.Response
 // @Router /transactions/{id} [delete]
 func (h *TransactionHandler) DeleteTransaction(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
-		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
+	userID, ok := getUserID(c)
+	if !ok {
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid or missing user ID in token"))
 		return
 	}
 
-	transactionIDStr := c.Param("id")
-	transactionID, err := uuid.Parse(transactionIDStr)
+	transactionID, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse("Invalid transaction ID format"))
 		return
