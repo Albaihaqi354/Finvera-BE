@@ -4,7 +4,12 @@ air.log
 *.exe
 *.test
 .env
+.env.*
+!.env.example
 finvera-be
+/server
+/tmp_server
+/tmp_server.exe
 
 # IDEs
 .idea/

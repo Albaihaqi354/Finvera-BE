@@ -2,14 +2,13 @@ package main
 
 import (
 	"finvera-be/internal/config"
-	"finvera-be/internal/cron"
 	"finvera-be/internal/database"
-	"finvera-be/internal/repository"
+	"finvera-be/internal/middleware"
 	"finvera-be/internal/router"
-	"finvera-be/internal/service"
 	"log"
+	"time"
 
-	_ "finvera-be/docs" // swagger docs - wajib di-import
+	_ "finvera-be/docs" // swagger docs
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
@@ -33,48 +32,54 @@ import (
 func main() {
 	log.Println("Starting Finvera Backend...")
 
-	// 1. Load Config
+	// 1. Load Config (validates secrets, origins, etc.)
 	cfg := config.LoadConfig()
 
-	// 2. Connect to Database & Run Migrations
-	database.ConnectDB(cfg)
+	// 2. Set Gin mode based on environment
+	if cfg.IsProduction() {
+		gin.SetMode(gin.ReleaseMode)
+	}
 
-	// 3. Setup Router (Gin)
-	r := gin.Default()
+	// 3. Connect to Database (returns *gorm.DB — no more global-only access)
+	db := database.ConnectDB(cfg)
 
-	// CORS Config
-	corsConfig := cors.DefaultConfig()
-	corsConfig.AllowAllOrigins = true // Atau gunakan corsConfig.AllowOrigins = []string{"http://localhost:3000"}
-	corsConfig.AllowMethods = []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"}
-	corsConfig.AllowHeaders = []string{"Origin", "Content-Type", "Accept", "Authorization"}
+	// 4. Setup Gin engine with custom middleware only (no default logger+recovery in production)
+	r := gin.New()
+	r.Use(gin.Logger())
+	r.Use(gin.Recovery())
+
+	// 5. Security Headers middleware (applies to all routes)
+	r.Use(middleware.SecurityHeaders())
+
+	// 6. CORS — origins from config, not AllowAllOrigins
+	corsConfig := cors.Config{
+		AllowOrigins:     cfg.AllowedOrigins,
+		AllowMethods:     []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"},
+		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization"},
+		ExposeHeaders:    []string{"Content-Length"},
+		AllowCredentials: false,
+		MaxAge:           12 * time.Hour,
+	}
 	r.Use(cors.New(corsConfig))
 
-	// Health Check
+	// 7. Health Check
 	r.GET("/ping", func(c *gin.Context) {
 		c.JSON(200, gin.H{
 			"message": "pong",
 			"status":  "ok",
+			"env":     cfg.AppEnv,
 		})
 	})
 
-	// 4. Setup API Routes + Swagger
-	router.SetupRouter(r, database.DB, cfg)
+	// 8. Setup all API routes (DI happens inside SetupRouter and returns services for cron)
+	cronService := router.SetupRouter(r, db, cfg)
 
-	// 5. Setup and Start Cron Service
-	// We need to initialize repos and services for Cron, just like in router, 
-	// or we can reuse them if we extract them from router. For now, create instances:
-	txRepo := repository.NewTransactionRepository(database.DB)
-	accRepo := repository.NewAccountRepository(database.DB)
-	catRepo := repository.NewCategoryRepository(database.DB)
-	tagRepo := repository.NewTagRepository(database.DB)
-	txService := service.NewTransactionService(txRepo, accRepo, catRepo, tagRepo)
-	
-	cronService := cron.NewCronService(database.DB, txService)
+	// 9. Start Cron Service
 	cronService.Start()
 	defer cronService.Stop()
 
-	// 6. Start Server
-	log.Printf("Server running on port %s", cfg.Port)
+	// 10. Start Server
+	log.Printf("Server running on port %s (env: %s)", cfg.Port, cfg.AppEnv)
 	log.Printf("Swagger UI: http://localhost:%s/swagger/index.html", cfg.Port)
 	if err := r.Run(":" + cfg.Port); err != nil {
 		log.Fatal("Failed to start server:", err)
