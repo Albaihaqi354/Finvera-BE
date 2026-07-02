@@ -1,7 +1,10 @@
 package router
 
 import (
+	"time"
+
 	"finvera-be/internal/config"
+	"finvera-be/internal/cron"
 	"finvera-be/internal/handler"
 	"finvera-be/internal/middleware"
 	"finvera-be/internal/repository"
@@ -16,11 +19,13 @@ import (
 	"gorm.io/gorm"
 )
 
-func SetupRouter(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
+// SetupRouter wires all dependencies, registers routes, and returns the CronService
+// so main.go does not need to duplicate dependency initialization.
+func SetupRouter(r *gin.Engine, db *gorm.DB, cfg *config.Config) *cron.CronService {
 	// ─── Swagger UI ──────────────────────────────────────────────────────
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
-	// ─── Setup Dependencies ───────────────────────────────────────────────
+	// ─── Dependency Injection (single source of truth) ────────────────────
 	// Repositories
 	userRepo := repository.NewUserRepository(db)
 	accountRepo := repository.NewAccountRepository(db)
@@ -47,10 +52,18 @@ func SetupRouter(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 	transactionHandler := handler.NewTransactionHandler(transactionService)
 	scheduledHandler := handler.NewScheduledTransactionHandler(scheduledService)
 
+	// ─── Rate Limiters ────────────────────────────────────────────────────
+	// Auth endpoints: max 10 requests per minute per IP (brute force protection)
+	authRateLimiter := middleware.NewRateLimiter(10, time.Minute)
+	// General API: max 120 requests per minute per IP
+	apiRateLimiter := middleware.NewRateLimiter(120, time.Minute)
+
 	// ─── API v1 Routes ────────────────────────────────────────────────────
 	v1 := r.Group("/api/v1")
+	v1.Use(apiRateLimiter.Middleware())
 	{
 		auth := v1.Group("/auth")
+		auth.Use(authRateLimiter.Middleware())
 		{
 			auth.POST("/register", authHandler.Register)
 			auth.POST("/login", authHandler.Login)
@@ -121,4 +134,7 @@ func SetupRouter(r *gin.Engine, db *gorm.DB, cfg *config.Config) {
 			}
 		}
 	}
+
+	// Return cron service so main.go can start it without re-instantiating deps
+	return cron.NewCronService(db, transactionService)
 }
