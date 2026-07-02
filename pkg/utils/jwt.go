@@ -7,22 +7,29 @@ import (
 	"github.com/google/uuid"
 )
 
+// Token durations
+const (
+	AccessTokenDuration = 2 * time.Hour // short-lived access token
+)
+
 type JWTClaim struct {
 	UserID   uuid.UUID `json:"userId"`
 	Username string    `json:"username"`
 	jwt.RegisteredClaims
 }
 
+// GenerateJWT creates a signed HMAC-SHA256 JWT access token.
 func GenerateJWT(userID uuid.UUID, username, secret, issuer string) (string, error) {
-	expirationTime := time.Now().Add(24 * time.Hour)
+	now := time.Now()
 	claims := &JWTClaim{
 		UserID:   userID,
 		Username: username,
 		RegisteredClaims: jwt.RegisteredClaims{
 			Subject:   userID.String(),
-			ExpiresAt: jwt.NewNumericDate(expirationTime),
+			ExpiresAt: jwt.NewNumericDate(now.Add(AccessTokenDuration)),
+			IssuedAt:  jwt.NewNumericDate(now),
+			NotBefore: jwt.NewNumericDate(now),
 			Issuer:    issuer,
-			IssuedAt:  jwt.NewNumericDate(time.Now()),
 		},
 	}
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)

@@ -24,8 +24,14 @@ func NewAuthService(userRepo repository.UserRepository) AuthService {
 }
 
 func (s *authService) Register(username, email, password string) (*models.User, error) {
+	// Sanitize non-password fields only
 	username = strings.TrimSpace(username)
 	email = strings.ToLower(strings.TrimSpace(email))
+
+	// Validate username length after trimming
+	if len(username) < 3 {
+		return nil, errors.New("username must be at least 3 characters")
+	}
 
 	// Check if user exists
 	existingUser, _ := s.userRepo.GetUserByUsername(username)
@@ -37,6 +43,7 @@ func (s *authService) Register(username, email, password string) (*models.User, 
 		return nil, errors.New("email already exists")
 	}
 
+	// Password is hashed as-is — do NOT trim, preserving intentional leading/trailing spaces
 	hashedPassword, err := utils.HashPassword(password)
 	if err != nil {
 		return nil, err
@@ -48,8 +55,7 @@ func (s *authService) Register(username, email, password string) (*models.User, 
 		PasswordHash: hashedPassword,
 	}
 
-	err = s.userRepo.CreateUser(user)
-	if err != nil {
+	if err = s.userRepo.CreateUser(user); err != nil {
 		return nil, err
 	}
 
@@ -57,8 +63,15 @@ func (s *authService) Register(username, email, password string) (*models.User, 
 }
 
 func (s *authService) Login(identifier, password string, cfg *config.Config) (string, error) {
+	// Trim identifier (username/email) but NOT the password
 	identifier = strings.TrimSpace(identifier)
-	password = strings.TrimSpace(password)
+
+	if identifier == "" {
+		return "", errors.New("identifier must not be empty")
+	}
+	if password == "" {
+		return "", errors.New("password must not be empty")
+	}
 
 	var user *models.User
 	var err error
@@ -68,13 +81,13 @@ func (s *authService) Login(identifier, password string, cfg *config.Config) (st
 	} else {
 		user, err = s.userRepo.GetUserByUsername(identifier)
 	}
-	if err != nil {
-		return "", err
-	}
-	if user == nil {
+
+	if err != nil || user == nil {
+		// Return a generic error to prevent user enumeration
 		return "", errors.New("invalid credentials")
 	}
 
+	// Compare password as received — no trimming, exact match
 	if !utils.CheckPasswordHash(password, user.PasswordHash) {
 		return "", errors.New("invalid credentials")
 	}

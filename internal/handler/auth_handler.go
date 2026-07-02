@@ -4,7 +4,9 @@ import (
 	"net/http"
 
 	"finvera-be/internal/config"
+	"finvera-be/internal/dto"
 	"finvera-be/internal/service"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -17,17 +19,17 @@ func NewAuthHandler(authService service.AuthService, cfg *config.Config) *AuthHa
 	return &AuthHandler{authService, cfg}
 }
 
-// RegisterRequest adalah request body untuk registrasi user
+// RegisterRequest is the request body for user registration.
 type RegisterRequest struct {
-	Username string `json:"username" binding:"required,min=3" example:"johndoe"`
-	Email    string `json:"email" binding:"required,email" example:"john@example.com"`
-	Password string `json:"password" binding:"required,min=6" example:"secret123"`
+	Username string `json:"username" binding:"required,min=3,max=50" example:"johndoe"`
+	Email    string `json:"email" binding:"required,email,max=255" example:"john@example.com"`
+	Password string `json:"password" binding:"required,min=8,max=128" example:"StrongP@ss123"`
 }
 
-// LoginRequest adalah request body untuk login
+// LoginRequest is the request body for login.
 type LoginRequest struct {
 	Username string `json:"username" binding:"required" example:"johndoe"`
-	Password string `json:"password" binding:"required" example:"secret123"`
+	Password string `json:"password" binding:"required" example:"StrongP@ss123"`
 }
 
 // Register godoc
@@ -37,30 +39,27 @@ type LoginRequest struct {
 // @Accept       json
 // @Produce      json
 // @Param        body  body      RegisterRequest  true  "Data registrasi"
-// @Success      201   {object}  map[string]interface{}
-// @Failure      400   {object}  map[string]string
+// @Success      201   {object}  dto.Response
+// @Failure      400   {object}  dto.Response
 // @Router       /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
 	var req RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error()))
 		return
 	}
 
 	user, err := h.authService.Register(req.Username, req.Email, req.Password)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error()))
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{
-		"message": "User registered successfully",
-		"user": gin.H{
-			"id":       user.ID,
-			"username": user.Username,
-			"email":    user.Email,
-		},
-	})
+	c.JSON(http.StatusCreated, dto.SuccessResponse("User registered successfully", gin.H{
+		"id":       user.ID,
+		"username": user.Username,
+		"email":    user.Email,
+	}))
 }
 
 // Login godoc
@@ -70,42 +69,40 @@ func (h *AuthHandler) Register(c *gin.Context) {
 // @Accept       json
 // @Produce      json
 // @Param        body  body      LoginRequest  true  "Kredensial login"
-// @Success      200   {object}  map[string]string
-// @Failure      400   {object}  map[string]string
-// @Failure      401   {object}  map[string]string
+// @Success      200   {object}  dto.Response
+// @Failure      400   {object}  dto.Response
+// @Failure      401   {object}  dto.Response
 // @Router       /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error()))
 		return
 	}
 
 	token, err := h.authService.Login(req.Username, req.Password, h.cfg)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
+		// Always return 401 for invalid credentials — don't expose whether user exists
+		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("invalid credentials"))
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Login successful",
-		"token":   token,
-	})
+	c.JSON(http.StatusOK, dto.SuccessResponse("Login successful", gin.H{
+		"token": token,
+	}))
 }
 
 // Logout godoc
 // @Summary      Logout user
-// @Description  Logout user (dummy endpoint for stateless JWT)
+// @Description  Client-side logout — instructs client to discard the JWT token
 // @Tags         Auth
 // @Produce      json
 // @Security     BearerAuth
-// @Success      200   {object}  map[string]string
+// @Success      200   {object}  dto.Response
 // @Router       /auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
-	// Pada arsitektur JWT stateless, logout biasanya hanya dengan menghapus
-	// token di sisi client (localStorage/cookie). Endpoint ini disediakan 
-	// jika ke depannya ingin menerapkan mekanisme token blacklist.
-	c.JSON(http.StatusOK, gin.H{
-		"message": "Logout successful",
-	})
+	// JWT is stateless. Actual token invalidation must be handled on the client
+	// by removing the token from storage (localStorage / cookie).
+	// TODO: Implement server-side token blacklist with Redis for enhanced security.
+	c.JSON(http.StatusOK, dto.SuccessResponse("Logout successful. Please discard your token.", nil))
 }
