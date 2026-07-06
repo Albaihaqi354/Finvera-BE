@@ -29,9 +29,8 @@ func NewAccountHandler(accountService service.AccountService) *AccountHandler {
 // @Failure 401 {object} dto.Response
 // @Router /accounts [post]
 func (h *AccountHandler) CreateAccount(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -44,7 +43,7 @@ func (h *AccountHandler) CreateAccount(c *gin.Context) {
 
 	account, err := h.accountService.CreateAccount(userID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -62,9 +61,8 @@ func (h *AccountHandler) CreateAccount(c *gin.Context) {
 // @Failure 401 {object} dto.Response
 // @Router /accounts [get]
 func (h *AccountHandler) GetAccounts(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -73,7 +71,7 @@ func (h *AccountHandler) GetAccounts(c *gin.Context) {
 
 	accounts, total, err := h.accountService.GetAccounts(userID, page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -91,9 +89,8 @@ func (h *AccountHandler) GetAccounts(c *gin.Context) {
 // @Failure 404 {object} dto.Response
 // @Router /accounts/{id} [get]
 func (h *AccountHandler) GetAccountByID(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -107,7 +104,7 @@ func (h *AccountHandler) GetAccountByID(c *gin.Context) {
 
 	account, err := h.accountService.GetAccountByID(userID, accountID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -128,9 +125,8 @@ func (h *AccountHandler) GetAccountByID(c *gin.Context) {
 // @Failure 404 {object} dto.Response
 // @Router /accounts/{id} [put]
 func (h *AccountHandler) UpdateAccount(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -150,7 +146,7 @@ func (h *AccountHandler) UpdateAccount(c *gin.Context) {
 
 	account, err := h.accountService.UpdateAccount(userID, accountID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -168,9 +164,8 @@ func (h *AccountHandler) UpdateAccount(c *gin.Context) {
 // @Failure 404 {object} dto.Response
 // @Router /accounts/{id} [delete]
 func (h *AccountHandler) DeleteAccount(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -183,7 +178,7 @@ func (h *AccountHandler) DeleteAccount(c *gin.Context) {
 	}
 
 	if err := h.accountService.DeleteAccount(userID, accountID); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 

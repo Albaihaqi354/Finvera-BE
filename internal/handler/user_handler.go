@@ -27,16 +27,15 @@ func NewUserHandler(userService service.UserService) *UserHandler {
 // @Failure 500 {object} dto.Response
 // @Router /users/me [get]
 func (h *UserHandler) GetProfile(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
 
 	user, err := h.userService.GetProfile(userID)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -56,9 +55,8 @@ func (h *UserHandler) GetProfile(c *gin.Context) {
 // @Failure 500 {object} dto.Response
 // @Router /users/me [put]
 func (h *UserHandler) UpdateProfile(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"net/http"
+	"strings"
 
 	"finvera-be/internal/dto"
 	"finvera-be/internal/repository"
@@ -39,6 +40,20 @@ func getUserID(c *gin.Context) (uuid.UUID, bool) {
 	return id, true
 }
 
+// handleServiceError maps common service layer errors to HTTP status codes.
+func handleServiceError(c *gin.Context, err error) {
+	msg := err.Error()
+	if strings.Contains(msg, "not found") || strings.Contains(msg, "record not found") {
+		c.JSON(http.StatusNotFound, dto.ErrorResponse(msg))
+	} else if strings.Contains(msg, "unauthorized") || strings.Contains(msg, "forbidden") {
+		c.JSON(http.StatusForbidden, dto.ErrorResponse(msg))
+	} else if strings.Contains(msg, "invalid") || strings.Contains(msg, "required") || strings.Contains(msg, "must be") {
+		c.JSON(http.StatusBadRequest, dto.ErrorResponse(msg))
+	} else {
+		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(msg))
+	}
+}
+
 // @Summary Create a new transaction
 // @Tags Transactions
 // @Accept json
@@ -65,7 +80,7 @@ func (h *TransactionHandler) CreateTransaction(c *gin.Context) {
 
 	transaction, err := h.transactionService.CreateTransaction(userID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -121,7 +136,7 @@ func (h *TransactionHandler) GetTransactions(c *gin.Context) {
 
 	transactions, total, err := h.transactionService.GetTransactions(userID, page, limit, filter)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -153,7 +168,7 @@ func (h *TransactionHandler) GetTransactionByID(c *gin.Context) {
 
 	transaction, err := h.transactionService.GetTransactionByID(userID, transactionID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -193,7 +208,7 @@ func (h *TransactionHandler) UpdateTransaction(c *gin.Context) {
 
 	transaction, err := h.transactionService.UpdateTransaction(userID, transactionID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 

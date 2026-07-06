@@ -29,9 +29,8 @@ func NewTagHandler(tagService service.TagService) *TagHandler {
 // @Failure 401 {object} dto.Response
 // @Router /tags [post]
 func (h *TagHandler) CreateTag(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -44,7 +43,7 @@ func (h *TagHandler) CreateTag(c *gin.Context) {
 
 	tag, err := h.tagService.CreateTag(userID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -62,9 +61,8 @@ func (h *TagHandler) CreateTag(c *gin.Context) {
 // @Failure 401 {object} dto.Response
 // @Router /tags [get]
 func (h *TagHandler) GetTags(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -73,7 +71,7 @@ func (h *TagHandler) GetTags(c *gin.Context) {
 
 	tags, total, err := h.tagService.GetTags(userID, page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -92,9 +90,8 @@ func (h *TagHandler) GetTags(c *gin.Context) {
 // @Failure 404 {object} dto.Response
 // @Router /tags/{id} [get]
 func (h *TagHandler) GetTagByID(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -108,7 +105,7 @@ func (h *TagHandler) GetTagByID(c *gin.Context) {
 
 	tag, err := h.tagService.GetTagByID(userID, tagID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -129,9 +126,8 @@ func (h *TagHandler) GetTagByID(c *gin.Context) {
 // @Failure 404 {object} dto.Response
 // @Router /tags/{id} [put]
 func (h *TagHandler) UpdateTag(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -151,7 +147,7 @@ func (h *TagHandler) UpdateTag(c *gin.Context) {
 
 	tag, err := h.tagService.UpdateTag(userID, tagID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -170,9 +166,8 @@ func (h *TagHandler) UpdateTag(c *gin.Context) {
 // @Failure 404 {object} dto.Response
 // @Router /tags/{id} [delete]
 func (h *TagHandler) DeleteTag(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -185,7 +180,7 @@ func (h *TagHandler) DeleteTag(c *gin.Context) {
 	}
 
 	if err := h.tagService.DeleteTag(userID, tagID); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 

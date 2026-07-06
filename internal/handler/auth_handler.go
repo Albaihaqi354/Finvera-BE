@@ -2,12 +2,16 @@ package handler
 
 import (
 	"net/http"
+	"strings"
+	"time"
 
 	"finvera-be/internal/config"
 	"finvera-be/internal/dto"
 	"finvera-be/internal/service"
+	"finvera-be/pkg/blacklist"
 
 	"github.com/gin-gonic/gin"
+	"github.com/golang-jwt/jwt/v5"
 )
 
 type AuthHandler struct {
@@ -101,8 +105,29 @@ func (h *AuthHandler) Login(c *gin.Context) {
 // @Success      200   {object}  dto.Response
 // @Router       /auth/logout [post]
 func (h *AuthHandler) Logout(c *gin.Context) {
-	// JWT is stateless. Actual token invalidation must be handled on the client
-	// by removing the token from storage (localStorage / cookie).
-	// TODO: Implement server-side token blacklist with Redis for enhanced security.
-	c.JSON(http.StatusOK, dto.SuccessResponse("Logout successful. Please discard your token.", nil))
+	authHeader := c.GetHeader("Authorization")
+	if authHeader != "" {
+		parts := strings.SplitN(authHeader, " ", 2)
+		if len(parts) == 2 && parts[0] == "Bearer" {
+			tokenString := parts[1]
+			
+			// Parse without validation just to extract expiration claim
+			token, _, _ := new(jwt.Parser).ParseUnverified(tokenString, jwt.MapClaims{})
+			var expTime time.Time
+			if token != nil {
+				if claims, ok := token.Claims.(jwt.MapClaims); ok {
+					if exp, ok := claims["exp"].(float64); ok {
+						expTime = time.Unix(int64(exp), 0)
+					}
+				}
+			}
+			if expTime.IsZero() {
+				expTime = time.Now().Add(24 * time.Hour)
+			}
+			
+			blacklist.Add(tokenString, expTime)
+		}
+	}
+
+	c.JSON(http.StatusOK, dto.SuccessResponse("Logout successful", nil))
 }

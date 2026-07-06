@@ -106,12 +106,20 @@ func (s *transactionService) validateTransactionRequest(
 	}
 
 	// Validate tags ownership
-	for _, tagID := range req.TagIDs {
-		tag, err := s.tagRepo.GetByID(tagID)
-		if err != nil || tag.UserID != userID {
-			return nil, nil, nil, errors.New("invalid or unauthorized tagId")
+	if len(req.TagIDs) > 0 {
+		foundTags, err := s.tagRepo.GetByIDs(req.TagIDs)
+		if err != nil {
+			return nil, nil, nil, err
 		}
-		tags = append(tags, *tag)
+		if len(foundTags) != len(req.TagIDs) {
+			return nil, nil, nil, errors.New("invalid tagId found")
+		}
+		for _, tag := range foundTags {
+			if tag.UserID != userID {
+				return nil, nil, nil, errors.New("invalid or unauthorized tagId")
+			}
+			tags = append(tags, tag)
+		}
 	}
 
 	return account, targetAccount, tags, nil
@@ -154,6 +162,13 @@ func (s *transactionService) revertBalance(tx *gorm.DB, transaction *models.Tran
 		}
 		if transaction.TargetAccount != nil {
 			ta := *transaction.TargetAccount
+			ta.Balance -= transaction.Amount
+			return tx.Save(&ta).Error
+		} else if transaction.TargetAccountID != nil {
+			var ta models.Account
+			if err := tx.First(&ta, "id = ?", *transaction.TargetAccountID).Error; err != nil {
+				return err
+			}
 			ta.Balance -= transaction.Amount
 			return tx.Save(&ta).Error
 		}

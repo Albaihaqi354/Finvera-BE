@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"finvera-be/internal/dto"
+	"finvera-be/pkg/blacklist"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -30,6 +31,12 @@ func AuthMiddleware(secret string) gin.HandlerFunc {
 		}
 
 		tokenString := parts[1]
+
+		if blacklist.IsBlacklisted(tokenString) {
+			c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Token has been revoked"))
+			c.Abort()
+			return
+		}
 
 		token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 			// Reject any token not using HMAC — prevents alg:none attacks

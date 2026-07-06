@@ -29,9 +29,8 @@ func NewCategoryHandler(categoryService service.CategoryService) *CategoryHandle
 // @Failure 401 {object} dto.Response
 // @Router /categories [post]
 func (h *CategoryHandler) CreateCategory(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -44,7 +43,7 @@ func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 
 	category, err := h.categoryService.CreateCategory(userID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -62,9 +61,8 @@ func (h *CategoryHandler) CreateCategory(c *gin.Context) {
 // @Failure 401 {object} dto.Response
 // @Router /categories [get]
 func (h *CategoryHandler) GetCategories(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -73,7 +71,7 @@ func (h *CategoryHandler) GetCategories(c *gin.Context) {
 
 	categories, total, err := h.categoryService.GetCategories(userID, page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -93,9 +91,8 @@ func (h *CategoryHandler) GetCategories(c *gin.Context) {
 // @Failure 404 {object} dto.Response
 // @Router /categories/{id} [get]
 func (h *CategoryHandler) GetCategoryByID(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -109,7 +106,7 @@ func (h *CategoryHandler) GetCategoryByID(c *gin.Context) {
 
 	category, err := h.categoryService.GetCategoryByID(userID, categoryID)
 	if err != nil {
-		c.JSON(http.StatusForbidden, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -131,9 +128,8 @@ func (h *CategoryHandler) GetCategoryByID(c *gin.Context) {
 // @Failure 404 {object} dto.Response
 // @Router /categories/{id} [put]
 func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -153,7 +149,7 @@ func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 
 	category, err := h.categoryService.UpdateCategory(userID, categoryID, req)
 	if err != nil {
-		c.JSON(http.StatusForbidden, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -173,9 +169,8 @@ func (h *CategoryHandler) UpdateCategory(c *gin.Context) {
 // @Failure 404 {object} dto.Response
 // @Router /categories/{id} [delete]
 func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -188,7 +183,7 @@ func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 	}
 
 	if err := h.categoryService.DeleteCategory(userID, categoryID); err != nil {
-		c.JSON(http.StatusForbidden, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -204,7 +199,7 @@ func (h *CategoryHandler) DeleteCategory(c *gin.Context) {
 func (h *CategoryHandler) GetPresetCategories(c *gin.Context) {
 	categories, err := h.categoryService.GetPresetCategories()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 

@@ -11,11 +11,15 @@ finvera-be
 /tmp_server
 /tmp_server.exe
 
+# Swagger/tmp_server
+/*.exe
+/.env
+/test_data.js
+
 # Swagger auto-generated (run 'make swagger' to regenerate)
 cmd/server/docs/
 
 # Developer/analysis files
-test_data.js
 docs/schema_analysis.md
 
 # IDEs

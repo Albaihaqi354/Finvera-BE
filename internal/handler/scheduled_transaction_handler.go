@@ -30,9 +30,8 @@ func NewScheduledTransactionHandler(scheduledService service.ScheduledTransactio
 // @Failure 500 {object} dto.Response
 // @Router /scheduled [post]
 func (h *ScheduledTransactionHandler) CreateScheduled(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -45,7 +44,7 @@ func (h *ScheduledTransactionHandler) CreateScheduled(c *gin.Context) {
 
 	scheduled, err := h.scheduledService.CreateScheduled(userID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -63,9 +62,8 @@ func (h *ScheduledTransactionHandler) CreateScheduled(c *gin.Context) {
 // @Failure 401 {object} dto.Response
 // @Router /scheduled [get]
 func (h *ScheduledTransactionHandler) GetScheduleds(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -74,7 +72,7 @@ func (h *ScheduledTransactionHandler) GetScheduleds(c *gin.Context) {
 
 	scheduleds, total, err := h.scheduledService.GetScheduleds(userID, page, limit)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -93,9 +91,8 @@ func (h *ScheduledTransactionHandler) GetScheduleds(c *gin.Context) {
 // @Failure 404 {object} dto.Response
 // @Router /scheduled/{id} [get]
 func (h *ScheduledTransactionHandler) GetScheduledByID(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -109,7 +106,7 @@ func (h *ScheduledTransactionHandler) GetScheduledByID(c *gin.Context) {
 
 	scheduled, err := h.scheduledService.GetScheduledByID(userID, scheduledID)
 	if err != nil {
-		c.JSON(http.StatusNotFound, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -130,9 +127,8 @@ func (h *ScheduledTransactionHandler) GetScheduledByID(c *gin.Context) {
 // @Failure 500 {object} dto.Response
 // @Router /scheduled/{id} [put]
 func (h *ScheduledTransactionHandler) UpdateScheduled(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -152,7 +148,7 @@ func (h *ScheduledTransactionHandler) UpdateScheduled(c *gin.Context) {
 
 	scheduled, err := h.scheduledService.UpdateScheduled(userID, scheduledID, req)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
@@ -171,9 +167,8 @@ func (h *ScheduledTransactionHandler) UpdateScheduled(c *gin.Context) {
 // @Failure 500 {object} dto.Response
 // @Router /scheduled/{id} [delete]
 func (h *ScheduledTransactionHandler) DeleteScheduled(c *gin.Context) {
-	userIdStr, _ := c.Get("userId")
-	userID, err := uuid.Parse(userIdStr.(string))
-	if err != nil {
+	userID, ok := getUserID(c)
+	if !ok {
 		c.JSON(http.StatusUnauthorized, dto.ErrorResponse("Invalid user ID in token"))
 		return
 	}
@@ -186,7 +181,7 @@ func (h *ScheduledTransactionHandler) DeleteScheduled(c *gin.Context) {
 	}
 
 	if err := h.scheduledService.DeleteScheduled(userID, scheduledID); err != nil {
-		c.JSON(http.StatusInternalServerError, dto.ErrorResponse(err.Error()))
+		handleServiceError(c, err)
 		return
 	}
 
