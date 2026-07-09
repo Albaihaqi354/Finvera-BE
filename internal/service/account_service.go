@@ -57,6 +57,7 @@ func (s *accountService) CreateAccount(userID uuid.UUID, req dto.CreateAccountRe
 		Icon:           req.Icon,
 		Color:          req.Color,
 		InitialBalance: req.InitialBalance,
+		Balance:        req.InitialBalance, // Balance starts equal to InitialBalance
 		Note:           req.Note,
 	}
 
