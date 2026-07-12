@@ -1,9 +1,14 @@
 package middleware
 
-import "github.com/gin-gonic/gin"
+import (
+	"os"
+
+	"github.com/gin-gonic/gin"
+)
 
 // SecurityHeaders adds standard HTTP security headers to every response.
 func SecurityHeaders() gin.HandlerFunc {
+	isProd := os.Getenv("APP_ENV") == "production"
 	return func(c *gin.Context) {
 		// Prevent clickjacking
 		c.Header("X-Frame-Options", "DENY")
@@ -17,9 +22,10 @@ func SecurityHeaders() gin.HandlerFunc {
 		c.Header("Permissions-Policy", "geolocation=(), microphone=(), camera=()")
 		// Content Security Policy — adjust as needed for Swagger UI
 		c.Header("Content-Security-Policy", "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'")
-		// HSTS — only in production (HTTPS only)
-		// We set it always; nginx/reverse-proxy should enforce HTTPS in production
-		c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		// HSTS — only set in production to avoid breaking HTTP-only development
+		if isProd {
+			c.Header("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
+		}
 		c.Next()
 	}
 }

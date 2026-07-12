@@ -2,6 +2,7 @@ package database
 
 import (
 	"log"
+	"os"
 	"time"
 
 	"finvera-be/internal/config"
@@ -47,22 +48,27 @@ func ConnectDB(cfg *config.Config) *gorm.DB {
 
 	log.Println("Successfully connected to the database")
 
-	// AutoMigrate is safe for development — in production, use a migration tool.
-	// To disable AutoMigrate in production, set AUTO_MIGRATE=false in .env
-	log.Println("Running AutoMigrate...")
-	err = db.AutoMigrate(
-		&models.User{},
-		&models.Account{},
-		&models.Category{},
-		&models.TagGroup{},
-		&models.Tag{},
-		&models.Transaction{},
-		&models.ScheduledTransaction{},
-	)
-	if err != nil {
-		log.Fatalf("Failed to run migrations: %v", err)
+	// AutoMigrate is safe for development.
+	// In production, set AUTO_MIGRATE=false in .env to disable it and use a proper migration tool.
+	autoMigrate := os.Getenv("AUTO_MIGRATE")
+	if autoMigrate != "false" {
+		log.Println("Running AutoMigrate...")
+		err = db.AutoMigrate(
+			&models.User{},
+			&models.Account{},
+			&models.Category{},
+			&models.TagGroup{},
+			&models.Tag{},
+			&models.Transaction{},
+			&models.ScheduledTransaction{},
+		)
+		if err != nil {
+			log.Fatalf("Failed to run migrations: %v", err)
+		}
+		log.Println("AutoMigrate completed")
+	} else {
+		log.Println("AutoMigrate skipped (AUTO_MIGRATE=false)")
 	}
-	log.Println("AutoMigrate completed")
 
 	DB = db
 	return db
