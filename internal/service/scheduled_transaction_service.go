@@ -58,7 +58,7 @@ func mapScheduledToResponse(scheduled *models.ScheduledTransaction) *dto.Schedul
 		Note:          scheduled.Note,
 		Frequency:     scheduled.Frequency,
 		NextRun:       scheduled.NextRun,
-		LastRun:       nil,
+		LastRun:       scheduled.LastRun,
 		IsActive:      scheduled.IsActive,
 	}
 }

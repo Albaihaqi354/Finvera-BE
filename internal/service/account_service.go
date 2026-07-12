@@ -117,6 +117,8 @@ func (s *accountService) UpdateAccount(userID, accountID uuid.UUID, req dto.Upda
 	}
 	account.Icon = req.Icon
 	account.Color = req.Color
+	balanceDiff := req.InitialBalance - account.InitialBalance
+	account.Balance += balanceDiff
 	account.InitialBalance = req.InitialBalance
 	account.Note = req.Note
 

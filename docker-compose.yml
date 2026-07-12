@@ -6,7 +6,7 @@ services:
     container_name: finvera_postgres
     environment:
       POSTGRES_USER: finvera
-      POSTGRES_PASSWORD: finvera_password
+      POSTGRES_PASSWORD: ${DB_PASS:?DB_PASS is required}
       POSTGRES_DB: finvera_db
     ports:
       - "5432:5432"

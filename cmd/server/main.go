@@ -1,11 +1,16 @@
 package main
 
 import (
+	"context"
 	"finvera-be/internal/config"
 	"finvera-be/internal/database"
 	"finvera-be/internal/middleware"
 	"finvera-be/internal/router"
-	"log"
+	"log/slog"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	_ "finvera-be/docs" // swagger docs
@@ -30,7 +35,10 @@ import (
 // @description Masukkan token JWT dengan format: Bearer {token}
 
 func main() {
-	log.Println("Starting Finvera Backend...")
+	logger := slog.New(slog.NewJSONHandler(os.Stdout, nil))
+	slog.SetDefault(logger)
+
+	slog.Info("Starting Finvera Backend...")
 
 	// 1. Load Config (validates secrets, origins, etc.)
 	cfg := config.LoadConfig()
@@ -64,7 +72,17 @@ func main() {
 
 	// 7. Health Check
 	r.GET("/ping", func(c *gin.Context) {
-		c.JSON(200, gin.H{
+		sqlDB, err := db.DB()
+		if err != nil || sqlDB.Ping() != nil {
+			c.JSON(http.StatusServiceUnavailable, gin.H{
+				"message": "database unavailable",
+				"status":  "error",
+				"env":     cfg.AppEnv,
+			})
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{
 			"message": "pong",
 			"status":  "ok",
 			"env":     cfg.AppEnv,
@@ -78,10 +96,37 @@ func main() {
 	cronService.Start()
 	defer cronService.Stop()
 
-	// 10. Start Server
-	log.Printf("Server running on port %s (env: %s)", cfg.Port, cfg.AppEnv)
-	log.Printf("Swagger UI: http://localhost:%s/swagger/index.html", cfg.Port)
-	if err := r.Run(":" + cfg.Port); err != nil {
-		log.Fatal("Failed to start server:", err)
+	// 10. Start Server with Graceful Shutdown
+	srv := &http.Server{
+		Addr:    ":" + cfg.Port,
+		Handler: r,
 	}
+
+	go func() {
+		slog.Info("Server running", "port", cfg.Port, "env", cfg.AppEnv)
+		if !cfg.IsProduction() {
+			slog.Info("Swagger UI: http://localhost:" + cfg.Port + "/swagger/index.html")
+		}
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			slog.Error("Failed to start server", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	slog.Info("Shutting down server...")
+
+	// 5 seconds timeout for graceful shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	if err := srv.Shutdown(ctx); err != nil {
+		slog.Error("Server forced to shutdown", "error", err)
+		os.Exit(1)
+	}
+
+	slog.Info("Server exiting gracefully")
 }

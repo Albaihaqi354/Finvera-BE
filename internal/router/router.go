@@ -23,7 +23,9 @@ import (
 // so main.go does not need to duplicate dependency initialization.
 func SetupRouter(r *gin.Engine, db *gorm.DB, cfg *config.Config) *cron.CronService {
 	// ─── Swagger UI ──────────────────────────────────────────────────────
-	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	if !cfg.IsProduction() {
+		r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+	}
 
 	// ─── Dependency Injection (single source of truth) ────────────────────
 	// Repositories

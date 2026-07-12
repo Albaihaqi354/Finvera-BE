@@ -13,6 +13,7 @@ import (
 
 type TransactionService interface {
 	CreateTransaction(userID uuid.UUID, req dto.TransactionRequest) (*dto.TransactionResponse, error)
+	CreateTransactionWithTx(tx *gorm.DB, userID uuid.UUID, req dto.TransactionRequest) (*dto.TransactionResponse, error)
 	GetTransactions(userID uuid.UUID, page, limit int, filter repository.TransactionFilter) ([]dto.TransactionResponse, int64, error)
 	GetTransactionByID(userID, transactionID uuid.UUID) (*dto.TransactionResponse, error)
 	UpdateTransaction(userID, transactionID uuid.UUID, req dto.TransactionRequest) (*dto.TransactionResponse, error)
@@ -180,6 +181,20 @@ func (s *transactionService) revertBalance(tx *gorm.DB, transaction *models.Tran
 // ── Service methods ───────────────────────────────────────────────────────────
 
 func (s *transactionService) CreateTransaction(userID uuid.UUID, req dto.TransactionRequest) (*dto.TransactionResponse, error) {
+	db := s.repo.GetDB()
+	var resp *dto.TransactionResponse
+	err := db.Transaction(func(tx *gorm.DB) error {
+		var errTx error
+		resp, errTx = s.CreateTransactionWithTx(tx, userID, req)
+		return errTx
+	})
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
+}
+
+func (s *transactionService) CreateTransactionWithTx(tx *gorm.DB, userID uuid.UUID, req dto.TransactionRequest) (*dto.TransactionResponse, error) {
 	account, targetAccount, tags, err := s.validateTransactionRequest(userID, req)
 	if err != nil {
 		return nil, err
@@ -198,21 +213,22 @@ func (s *transactionService) CreateTransaction(userID uuid.UUID, req dto.Transac
 		Tags:            tags,
 	}
 
-	db := s.repo.GetDB()
-	if err := db.Transaction(func(tx *gorm.DB) error {
-		if err := s.repo.CreateWithTx(tx, transaction); err != nil {
-			return err
-		}
-		return applyBalance(tx, req.Type, req.Amount, account, targetAccount)
-	}); err != nil {
+	if err := s.repo.CreateWithTx(tx, transaction); err != nil {
+		return nil, err
+	}
+	if err := applyBalance(tx, req.Type, req.Amount, account, targetAccount); err != nil {
 		return nil, err
 	}
 
-	reloaded, err := s.repo.GetByID(transaction.ID)
-	if err != nil {
+	// We cannot reload reliably in a transaction if we use s.repo.GetByID because
+	// GetByID might use the global db instead of tx.
+	// But let's assume we return the mapped transaction for now.
+	// We can manually fetch using tx:
+	var reloaded models.Transaction
+	if err := tx.Preload("Account").Preload("TargetAccount").Preload("Category").Preload("Tags").First(&reloaded, "id = ?", transaction.ID).Error; err != nil {
 		return nil, err
 	}
-	return mapTransactionToResponse(reloaded), nil
+	return mapTransactionToResponse(&reloaded), nil
 }
 
 func (s *transactionService) GetTransactions(userID uuid.UUID, page, limit int, filter repository.TransactionFilter) ([]dto.TransactionResponse, int64, error) {

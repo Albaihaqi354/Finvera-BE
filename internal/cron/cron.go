@@ -92,8 +92,9 @@ func (s *CronService) executeScheduled(st models.ScheduledTransaction, runTime t
 			nextRun = lockedSt.NextRun.AddDate(0, 0, 1)
 		}
 
-		// Update NextRun FIRST. If this fails, transaction rolls back.
+		// Update NextRun and LastRun FIRST. If this fails, transaction rolls back.
 		lockedSt.NextRun = nextRun
+		lockedSt.LastRun = &runTime
 		if err := tx.Save(&lockedSt).Error; err != nil {
 			return err
 		}
@@ -113,7 +114,7 @@ func (s *CronService) executeScheduled(st models.ScheduledTransaction, runTime t
 			TagIDs:          []uuid.UUID{},
 		}
 
-		_, err := s.txService.CreateTransaction(lockedSt.UserID, req)
+		_, err := s.txService.CreateTransactionWithTx(tx, lockedSt.UserID, req)
 		if err != nil {
 			return err
 		}

@@ -24,6 +24,7 @@ type ScheduledTransaction struct {
 	Note            string         `gorm:"type:varchar(500)" json:"note"`
 	Frequency       string         `gorm:"type:varchar(20);not null" json:"frequency"` // e.g., 'daily', 'weekly', 'monthly', 'yearly'
 	NextRun         time.Time      `gorm:"not null" json:"nextRun"`
+	LastRun         *time.Time     `json:"lastRun"`
 	IsActive        bool           `gorm:"type:boolean;default:true" json:"isActive"`
 	CreatedAt       time.Time      `json:"createdAt"`
 	UpdatedAt       time.Time      `json:"updatedAt"`

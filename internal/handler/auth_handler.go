@@ -23,18 +23,6 @@ func NewAuthHandler(authService service.AuthService, cfg *config.Config) *AuthHa
 	return &AuthHandler{authService, cfg}
 }
 
-// RegisterRequest is the request body for user registration.
-type RegisterRequest struct {
-	Username string `json:"username" binding:"required,min=3,max=50" example:"johndoe"`
-	Email    string `json:"email" binding:"required,email,max=255" example:"john@example.com"`
-	Password string `json:"password" binding:"required,min=8,max=128" example:"StrongP@ss123"`
-}
-
-// LoginRequest is the request body for login.
-type LoginRequest struct {
-	Username string `json:"username" binding:"required" example:"johndoe"`
-	Password string `json:"password" binding:"required" example:"StrongP@ss123"`
-}
 
 // Register godoc
 // @Summary      Registrasi user baru
@@ -42,12 +30,12 @@ type LoginRequest struct {
 // @Tags         Auth
 // @Accept       json
 // @Produce      json
-// @Param        body  body      RegisterRequest  true  "Data registrasi"
+// @Param        body  body      dto.RegisterRequest  true  "Data registrasi"
 // @Success      201   {object}  dto.Response
 // @Failure      400   {object}  dto.Response
 // @Router       /auth/register [post]
 func (h *AuthHandler) Register(c *gin.Context) {
-	var req RegisterRequest
+	var req dto.RegisterRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error()))
 		return
@@ -72,13 +60,13 @@ func (h *AuthHandler) Register(c *gin.Context) {
 // @Tags         Auth
 // @Accept       json
 // @Produce      json
-// @Param        body  body      LoginRequest  true  "Kredensial login"
+// @Param        body  body      dto.LoginRequest  true  "Kredensial login"
 // @Success      200   {object}  dto.Response
 // @Failure      400   {object}  dto.Response
 // @Failure      401   {object}  dto.Response
 // @Router       /auth/login [post]
 func (h *AuthHandler) Login(c *gin.Context) {
-	var req LoginRequest
+	var req dto.LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, dto.ErrorResponse(err.Error()))
 		return

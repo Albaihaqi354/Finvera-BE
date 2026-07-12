@@ -72,5 +72,8 @@ func GetPaginationParams(c *gin.Context) (int, int) {
 	if limit < 1 {
 		limit = 10
 	}
+	if limit > 100 {
+		limit = 100
+	}
 	return page, limit
 }
