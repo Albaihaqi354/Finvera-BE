@@ -1,0 +1,9 @@
+ALTER TABLE scheduled_transactions 
+DROP COLUMN IF EXISTS currency,
+DROP COLUMN IF EXISTS last_run;
+
+ALTER TABLE transactions 
+DROP COLUMN IF EXISTS currency,
+DROP COLUMN IF EXISTS geo_lat,
+DROP COLUMN IF EXISTS geo_lng,
+DROP COLUMN IF EXISTS geo_name;
