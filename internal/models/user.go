@@ -15,7 +15,7 @@ type User struct {
 	DefaultCurrency string         `gorm:"type:varchar(10);default:'IDR'" json:"defaultCurrency"`
 	FirstDayOfWeek  int            `gorm:"type:int;default:1" json:"firstDayOfWeek"`
 	FiscalYearStart int            `gorm:"type:int;default:1" json:"fiscalYearStart"`
-	Theme           string         `gorm:"type:varchar(20);default:'light'" json:"theme"`
+	Theme           string         `gorm:"type:varchar(20);default:'dark'" json:"theme"`
 	TOTPSecret      *string        `gorm:"type:varchar(255)" json:"-"`
 	TOTPEnabled     bool           `gorm:"type:boolean;default:false" json:"totpEnabled"`
 	EmailVerifiedAt *time.Time     `json:"emailVerifiedAt"`

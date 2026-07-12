@@ -58,6 +58,7 @@ func mapTransactionToResponse(t *models.Transaction) *dto.TransactionResponse {
 		ID:            t.ID,
 		Type:          t.Type,
 		Amount:        t.Amount,
+		Currency:      t.Currency,
 		Account:       *mapAccountToResponse(&t.Account),
 		TargetAccount: targetAcc,
 		Category:      *mapCategoryToResponse(&t.Category),
@@ -188,6 +189,7 @@ func (s *transactionService) CreateTransaction(userID uuid.UUID, req dto.Transac
 		UserID:          userID,
 		Type:            req.Type,
 		Amount:          req.Amount,
+		Currency:        account.Currency,
 		AccountID:       req.AccountID,
 		TargetAccountID: req.TargetAccountID,
 		CategoryID:      req.CategoryID,
@@ -263,6 +265,7 @@ func (s *transactionService) UpdateTransaction(userID, transactionID uuid.UUID, 
 		// 3. Update fields
 		transaction.Type = req.Type
 		transaction.Amount = req.Amount
+		transaction.Currency = account.Currency
 		transaction.AccountID = req.AccountID
 		transaction.TargetAccountID = req.TargetAccountID
 		transaction.CategoryID = req.CategoryID

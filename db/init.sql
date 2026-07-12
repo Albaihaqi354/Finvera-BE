@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS users (
     default_currency VARCHAR(10) DEFAULT 'IDR',
     first_day_of_week INT DEFAULT 1,
     fiscal_year_start INT DEFAULT 1,
-    theme VARCHAR(20) DEFAULT 'light',
+    theme VARCHAR(20) DEFAULT 'dark',
     totp_secret VARCHAR(255),
     totp_enabled BOOLEAN DEFAULT FALSE,
     email_verified_at TIMESTAMP,

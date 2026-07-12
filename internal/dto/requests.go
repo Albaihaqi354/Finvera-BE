@@ -24,6 +24,11 @@ type UpdateUserRequest struct {
 	Email    string `json:"email"    binding:"required,email,max=255"`
 }
 
+type UpdateSettingsRequest struct {
+	DefaultCurrency string `json:"defaultCurrency" binding:"omitempty,max=10"`
+	Theme           string `json:"theme"           binding:"omitempty,oneof=light dark system"`
+}
+
 // ── Account ───────────────────────────────────────────────────────────────────
 
 type CreateAccountRequest struct {

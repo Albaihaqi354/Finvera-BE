@@ -20,6 +20,7 @@ type ScheduledTransaction struct {
 	TargetAccount   *Account       `gorm:"foreignKey:TargetAccountID;constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"-"`
 	CategoryID      uuid.UUID      `gorm:"type:uuid;not null;index" json:"categoryId"`
 	Category        Category       `gorm:"constraint:OnUpdate:CASCADE,OnDelete:RESTRICT;" json:"-"`
+	Currency        string         `gorm:"type:varchar(10);not null;default:'IDR'" json:"currency"`
 	Note            string         `gorm:"type:varchar(500)" json:"note"`
 	Frequency       string         `gorm:"type:varchar(20);not null" json:"frequency"` // e.g., 'daily', 'weekly', 'monthly', 'yearly'
 	NextRun         time.Time      `gorm:"not null" json:"nextRun"`

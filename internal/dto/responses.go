@@ -7,9 +7,11 @@ import (
 )
 
 type UserResponse struct {
-	ID       uuid.UUID `json:"id"`
-	Username string    `json:"username"`
-	Email    string    `json:"email"`
+	ID              uuid.UUID `json:"id"`
+	Username        string    `json:"username"`
+	Email           string    `json:"email"`
+	DefaultCurrency string    `json:"defaultCurrency"`
+	Theme           string    `json:"theme"`
 }
 
 type AccountResponse struct {
@@ -52,6 +54,7 @@ type TransactionResponse struct {
 	ID              uuid.UUID         `json:"id"`
 	Type            string            `json:"type"`
 	Amount          float64           `json:"amount"`
+	Currency        string            `json:"currency"`
 	Account         AccountResponse   `json:"account"`
 	TargetAccount   *AccountResponse  `json:"targetAccount,omitempty"`
 	Category        CategoryResponse  `json:"category"`
@@ -66,6 +69,7 @@ type ScheduledTransactionResponse struct {
 	Name            string            `json:"name"`
 	Type            string            `json:"type"`
 	Amount          float64           `json:"amount"`
+	Currency        string            `json:"currency"`
 	Account         AccountResponse   `json:"account"`
 	TargetAccount   *AccountResponse  `json:"targetAccount,omitempty"`
 	Category        CategoryResponse  `json:"category"`

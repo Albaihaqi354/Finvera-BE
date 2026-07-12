@@ -18,11 +18,12 @@ type AccountService interface {
 }
 
 type accountService struct {
-	repo repository.AccountRepository
+	repo     repository.AccountRepository
+	userRepo repository.UserRepository
 }
 
-func NewAccountService(repo repository.AccountRepository) AccountService {
-	return &accountService{repo: repo}
+func NewAccountService(repo repository.AccountRepository, userRepo repository.UserRepository) AccountService {
+	return &accountService{repo: repo, userRepo: userRepo}
 }
 
 // Mapper
@@ -46,7 +47,13 @@ func mapAccountToResponse(account *models.Account) *dto.AccountResponse {
 func (s *accountService) CreateAccount(userID uuid.UUID, req dto.CreateAccountRequest) (*dto.AccountResponse, error) {
 	currency := req.Currency
 	if currency == "" {
-		currency = "IDR"
+		// Use user's defaultCurrency setting so new accounts match the chosen currency
+		user, err := s.userRepo.GetUserByID(userID.String())
+		if err == nil && user != nil && user.DefaultCurrency != "" {
+			currency = user.DefaultCurrency
+		} else {
+			currency = "IDR"
+		}
 	}
 
 	account := &models.Account{

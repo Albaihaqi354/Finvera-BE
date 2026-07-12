@@ -51,6 +51,7 @@ func mapScheduledToResponse(scheduled *models.ScheduledTransaction) *dto.Schedul
 		Name:          scheduled.Name,
 		Type:          scheduled.Type,
 		Amount:        scheduled.Amount,
+		Currency:      scheduled.Currency,
 		Account:       *mapAccountToResponse(&scheduled.Account),
 		TargetAccount: targetAcc,
 		Category:      *mapCategoryToResponse(&scheduled.Category),
@@ -92,6 +93,7 @@ func (s *scheduledTransactionService) CreateScheduled(userID uuid.UUID, req dto.
 		Name:            req.Name,
 		Type:            req.Type,
 		Amount:          req.Amount,
+		Currency:        account.Currency,
 		AccountID:       req.AccountID,
 		TargetAccountID: req.TargetAccountID,
 		CategoryID:      req.CategoryID,
@@ -170,6 +172,7 @@ func (s *scheduledTransactionService) UpdateScheduled(userID, scheduledID uuid.U
 	scheduled.Name = req.Name
 	scheduled.Type = req.Type
 	scheduled.Amount = req.Amount
+	scheduled.Currency = account.Currency
 	scheduled.AccountID = req.AccountID
 	scheduled.TargetAccountID = req.TargetAccountID
 	scheduled.CategoryID = req.CategoryID

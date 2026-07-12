@@ -11,6 +11,7 @@ import (
 type UserService interface {
 	GetProfile(userID uuid.UUID) (*dto.UserResponse, error)
 	UpdateProfile(userID uuid.UUID, req dto.UpdateUserRequest) (*dto.UserResponse, error)
+	UpdateSettings(userID uuid.UUID, req dto.UpdateSettingsRequest) (*dto.UserResponse, error)
 }
 
 type userService struct {
@@ -31,9 +32,11 @@ func (s *userService) GetProfile(userID uuid.UUID) (*dto.UserResponse, error) {
 	}
 
 	return &dto.UserResponse{
-		ID:       user.ID,
-		Username: user.Username,
-		Email:    user.Email,
+		ID:              user.ID,
+		Username:        user.Username,
+		Email:           user.Email,
+		DefaultCurrency: user.DefaultCurrency,
+		Theme:           user.Theme,
 	}, nil
 }
 
@@ -76,8 +79,39 @@ func (s *userService) UpdateProfile(userID uuid.UUID, req dto.UpdateUserRequest)
 	}
 
 	return &dto.UserResponse{
-		ID:       user.ID,
-		Username: user.Username,
-		Email:    user.Email,
+		ID:              user.ID,
+		Username:        user.Username,
+		Email:           user.Email,
+		DefaultCurrency: user.DefaultCurrency,
+		Theme:           user.Theme,
+	}, nil
+}
+
+func (s *userService) UpdateSettings(userID uuid.UUID, req dto.UpdateSettingsRequest) (*dto.UserResponse, error) {
+	user, err := s.repo.GetUserByID(userID.String())
+	if err != nil {
+		return nil, err
+	}
+	if user == nil {
+		return nil, errors.New("user not found")
+	}
+
+	if req.DefaultCurrency != "" {
+		user.DefaultCurrency = req.DefaultCurrency
+	}
+	if req.Theme != "" {
+		user.Theme = req.Theme
+	}
+
+	if err := s.repo.UpdateUser(user); err != nil {
+		return nil, err
+	}
+
+	return &dto.UserResponse{
+		ID:              user.ID,
+		Username:        user.Username,
+		Email:           user.Email,
+		DefaultCurrency: user.DefaultCurrency,
+		Theme:           user.Theme,
 	}, nil
 }

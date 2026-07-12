@@ -37,7 +37,7 @@ func SetupRouter(r *gin.Engine, db *gorm.DB, cfg *config.Config) *cron.CronServi
 	// Services
 	authService := service.NewAuthService(userRepo)
 	userService := service.NewUserService(userRepo)
-	accountService := service.NewAccountService(accountRepo)
+	accountService := service.NewAccountService(accountRepo, userRepo)
 	categoryService := service.NewCategoryService(categoryRepo)
 	tagService := service.NewTagService(tagRepo)
 	transactionService := service.NewTransactionService(transactionRepo, accountRepo, categoryRepo, tagRepo)
@@ -81,6 +81,7 @@ func SetupRouter(r *gin.Engine, db *gorm.DB, cfg *config.Config) *cron.CronServi
 			{
 				users.GET("/me", userHandler.GetProfile)
 				users.PUT("/me", userHandler.UpdateProfile)
+				users.PATCH("/me/settings", userHandler.UpdateSettings)
 			}
 
 			// Accounts
