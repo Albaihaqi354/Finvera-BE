@@ -1,0 +1,5 @@
+ALTER TABLE tags
+DROP COLUMN IF EXISTS group_id,
+DROP COLUMN IF EXISTS sort_order;
+
+DROP TABLE IF EXISTS tag_groups;
